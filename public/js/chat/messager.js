@@ -1,47 +1,34 @@
 "use strict";
 define(["underscore", "chat/crypto"], function (_, Crypto) {
-
-/* 
-Terminology:
-
-Text, a String containing user data.
-Message, a stringified Object containing Text and other parameters.
-*/
+/**
+ * @module chat/messager
+ * @exports Messager
+ */
 
 /**
  * Messager handles creation and parsing of spec-compliant message strings,
  * to be sent to and from the chat server.
- *
- * Example usage:
+ * @constructor
+ * @param {sjcl.bitArray} secretKey - The key used for encryption and decryption.
+ * @example
  * var messager = new Messager('mysecret');
  * var plainObj = {text: "Hello, World!", from: "meee", signature: "~kekeke"}
  * var cipherMessage = messager.cipherMessageFromPlainObj(plainObj);
  * assert(plainObj == messager.plainObjFromCipherMessage(cipherMessage));
- *
- * secretKey must bit of type sjcl.bitArray.
  */
 function Messager(secretKey) {
-	// private:
-	// this._prp = new sjcl.cipher[cryptoParams.cipher](secretKey);
+	/** @private */
 	this._crypto = new Crypto(secretKey);
 }
 
 /**
  * Constructs a message from given parameters.
- *
- * params: an Object containing any or all of the following keys:
- *         - text
- *         - timestamp: UTC timestamp (seconds since 1970-01-01 00:00:00 UTC)
- *         - from: the name of the sender
- *         - signature: a unique sender ID, will(/should) be crypted by the server
+ * @param {Object|Message} params - A Message-like Object, can also include a `signature` (a unique sender ID)
+ * @returns {String} JSON serialized cipher message.
  */
 Messager.prototype.cipherMessageFromPlainObj = function (params) {
-	var plainJson = JSON.stringify({
-		pt: params.text,
-		ts: params.timestamp || parseInt(Date.now() / 1000), // Date.now() returns a UTC timestamp in ms
-		us: params.from
-	});
-	var cipherObj = this._crypto.encryptedObjFromString(plainJson);
+	var plainMessage = new Message(params).asPlainMessage();
+	var cipherObj = this._crypto.encryptedObjFromString(plainMessage);
 	// add signature
 	if (_.isString(params.signature)) {
 		cipherObj.sg = params.signature;//hash(salted?UserSignature);
@@ -52,19 +39,50 @@ Messager.prototype.cipherMessageFromPlainObj = function (params) {
 
 /**
  * Inverse function for cipherMessageFromPlainObj.
+ * @param {String} JSON serialized cipher message.
+ * @returns {Message} a new Message including the signature and server-timestamp.
  */
 Messager.prototype.plainObjFromCipherMessage = function (cipherMessage) {
 	var cipherObj = JSON.parse(cipherMessage);
-	var plainObj = JSON.parse(this._crypto.decryptedStringFromObj(cipherObj))
-	// return a cleaned up object.
-	return {
-		text: plainObj.pt,
-		timestamp: plainObj.ts,
-		from: plainObj.us,
+	var message = new Message(JSON.parse(this._crypto.decryptedStringFromObj(cipherObj)));
+	// add signature and server-timestamp.
+	return _.extend(message, {
 		signature: cipherObj.sg,
 		server_timestamp: cipherObj.ts
-	};
+	});
 };
+
+// Message
+
+/**
+ * A plain message as used by the Messager.
+ * @constructur
+ * @param {Object|Message} params
+ */
+function Message(params) {
+	params = params || {};
+	/** @public The text to be sent. */
+	this.text = params.text || params.pt || null;
+	/** @public The name of the sender. */
+	this.from = params.from || params.us || null;
+	/** @public UTC timestamp (seconds since 1970-01-01 00:00:00 UTC). */
+	this.timestamp = params.timestamp || params.ts || parseInt(Date.now() / 1000); // Date.now() returns a UTC timestamp in ms
+}
+
+/**
+ * Returns a message as to be sent over the wire.
+ * @returns {String} JSON serialized Message using the plain-message format.
+ */
+Message.prototype.asPlainMessage = function () {
+	return JSON.stringify({
+		pt: this.text,
+		ts: this.timestamp,
+		us: this.from
+	});
+}
+
+Messager.prototype.Message = Message;
+
 
 return Messager;
 
