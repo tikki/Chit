@@ -1,0 +1,70 @@
+extends layout
+
+block header
+	h1= title
+
+block content
+	p
+		| #{title} is a 
+		a(href="#floss") FLOSS
+		|  secure web-based chat application.
+		| But 
+		a(href="#safety-disclaimer") <em>do not trust us</em>
+		| !
+	p
+		| You can 
+		a(href="#{join}") create a new chat room or join an existing one.
+	p
+		| #{title} does most of the work on your own system, using the web server only as a relay for the encrypted messages.  That's why it depends heavily on JavaScript.  If you have 
+		a(href="http://noscript.net/") NoScript
+		|  installed, you need to disable it for this site.
+	h2#floss On Openness
+	p
+		|#{title} is 
+		a(href="https://en.wikipedia.org/wiki/Free_and_open-source_software") Free/Libre/Open-Source Software
+		| .
+		| That means you can do with it whatever you want.  You can use it whereever you want, for however long you want, for whatever purpose you want.
+		| Absolutely no restrictions apply.
+		| Most importantly for security software, you can check the source code and host everything yourself.
+		| In fact, you <em>should</em> do that!  Look at the code, make sure it's good.
+		| If you find any errors, please report them.
+		| If you fix any errors, please send patches!
+		| Let's make the internet a disgustingly good place for everyone.
+	h2#api #{title} as a platform
+	p
+		| Part of #{title} being open is that you should see it more as a platform than a single application.
+		| Take a look at the 
+		a(href="api") API
+		| .  It is very simple.
+		| You can write your own applications, connecting to existing #{title} hosts.  Just make sure the security is sound.  Take a look at the list of 
+		a(href="api#pitfalls") pitfalls
+		| .  Best thing you could do is make your application open, too.
+	h2#safety-disclaimer On Safety and Privacy
+	p
+		| Using #{title} is in no way safe.  <em>Do not</em> use this service to post infringing information.
+		| While we do our best to ensure security, there is absolutely no way to guarantee it.
+		| <em>Do not</em> trust your software.  Especially if it is being run in a browser.  There's a myriad of exploitable attack vectors.
+		| Also, <em>do not</em> trust your hardware.  Between so-called 
+		a(href="https://en.wikipedia.org/wiki/Trusted_Computing") Trusted Computing
+		|  and 
+		a(href="https://en.wikipedia.org/wiki/TEMPEST") TEMPEST
+		|  attacks, you should not feel safe.
+	p
+		| If you have sensitive information that needs to be published, encrypt it <em>offline</em> first!
+		| Only use well tested free open source software.  It has to have been around for some time and there mustn't be any strange stories surrounding its development.
+	p
+		| If you don't know where to start, 
+		a(href="http://gnupg.org/") GnuPG
+		|  and 
+		a(href="http://www.truecrypt.org/") TrueCrypt
+		|  seem to fit that description.  But don't trust us!  Don't trust any single source.  Do some digging around yourself first.
+	p
+		| And while we're at it, if you're in a potentially dangerous situation, don't use Google or Bing for your queries.
+		| There are search services that seem to take privacy much more seriously, like 
+		a(href="https://duckduckgo.com/") DuckDuckGo
+		|  or 
+		a(href="https://www.ixquick.com/") ixquick
+		| .
+	p
+		| Okay, enough tinfoil-hat talk.  Please enjoy yourself.  :)
+

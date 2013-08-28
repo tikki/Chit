@@ -1,0 +1,25 @@
+extends layout
+
+block header
+	h1 Chit
+
+block content
+	#args
+		p.
+			To join an existing chat, you need to know its <em>ID</em> and <em>key</em>.
+		input(type="text", placeholder="ID")#chat-id
+		input(type="text", placeholder="key")#chat-key
+		button#set-args join
+		p
+			| Or you can 
+			button#create-new-chat create a new chat
+			| .
+	#chat
+		ul#message-history
+		input(type="text", placeholder="nick")#nickname-input
+		input(type="password", placeholder="unique ID")#signature-input
+		input(type="text", placeholder="Press return to send.")#message-input
+		button#send-message send
+		button#join go live
+		ul#user-list
+		

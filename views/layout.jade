@@ -1,0 +1,12 @@
+!!! 5
+html
+	head
+		title Chit
+		link(rel='stylesheet', href='css/style.css')
+		block scripts
+			if (required)
+				script(src="js/lib/require.js" data-main="js/required-#{required}")
+	body
+		block header
+		block content
+		block footer

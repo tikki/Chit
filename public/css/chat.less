@@ -1,0 +1,45 @@
+
+#args, #chat {
+	display: none;
+}
+
+.list {
+	outline: 1px solid black;
+	overflow: scroll;
+	font-size: .9em;
+	list-style: none;
+	padding-left: .8em;
+}
+
+#user-list {
+	.list;
+	width: 150px;
+	height: 200px;
+}
+
+#message-history {
+	.list;
+	width: 400px;
+	height: 100px;
+	.timestamp {
+		margin-right: 5px;
+		color: grey;
+	}
+	.from {
+		margin-right: 5px;
+		color: blue;
+		&:before {
+			content: "<";
+		}
+		&:after {
+			content: ">";
+		}
+	}
+}
+
+.unconfirmed {
+	color: grey;
+}
+.error {
+	color: red;
+}
