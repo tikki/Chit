@@ -111,6 +111,16 @@ Chat.prototype.loadHistory = function (callback) {
 	});
 };
 
+/**
+ * @callback Chat~chatCallback
+ * @param {Chat} chat - This chat.
+ * @param {String|false} error - false or an error message.
+ */
+
+/**
+ * @param {Object|Messager.Message} plainObj - Message or Message-like object.
+ * @param {Chat~chatCallback} callback
+ */
 Chat.prototype.post = function (plainObj, callback) {
 	var self = this;
 	var error = false;

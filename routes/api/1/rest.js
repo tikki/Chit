@@ -1,4 +1,4 @@
-var crud = require('./crud.js');
+var crud = require('./crud.js').crud;
 
 // wrapper for the CRUD API to offer a RESTful API via Node.js/Express
 

@@ -1,5 +1,8 @@
 "use strict";
 define(['sjcl', 'chat/crypto'], function (sjcl, Crypto) {
+/**
+ * @exports User
+ */
 
 /**
  * Represents a user.
@@ -8,7 +11,7 @@ define(['sjcl', 'chat/crypto'], function (sjcl, Crypto) {
  */
 function User(params) {
 	params = params || {};
-	// private:
+	/** @private */
 	this._crypto = new Crypto(params.secretKey);
 	this._nick = null; // managed as property
 	this._nickCipher = null; // managed as property
@@ -35,7 +38,7 @@ function User(params) {
 			}
 		}
 	});
-	// set public ivars
+	/** @public */
 	this.nick = params.nick || null;
 	this.nickCipher = params.nickCipher || null;
 	this.uid = params.uid || null; // unique (signature) id
@@ -45,6 +48,7 @@ function User(params) {
 /**
  * Generates a unique secure signature for the user.
  * Needs uid, nick and chatId to be set.
+ * @returns {String|undefined} the generated signature as a String, otherwise undefined.
  */
 User.prototype.signature = function () {
 	if (this.uid && this.nick && this.chatId) {

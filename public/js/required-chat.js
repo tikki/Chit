@@ -1,7 +1,7 @@
 'use strict';
 
 require.config({
-	baseUrl: 'js/lib', // use default
+	baseUrl: 'js/lib',
 	paths: {
 		jquery: 'jquery-2.0.3.min',
 		sjcl: 'sjcl/sjcl',
@@ -18,14 +18,13 @@ require.config({
 		},
 		'socketio': {
 			exports: 'io'
-		},
-		'jquery.websocket': ['jquery']
+		}
 	}
 });
 
 require(
-	['jquery', 'chat/chat', 'chat/logger', 'chat/user', 'socketio'], 
-	function ($, Chat, Logger, User, io) {
+	['jquery', 'chat/chat', 'chat/logger', 'chat/user', 'socketio', 'chat/socket-client'], 
+	function ($, Chat, Logger, User, io, socketapi) {
 
 // website interaction
 
@@ -93,7 +92,7 @@ $(function () {
 		// load history
 		chat.loadHistory(function (plainObjs, error) {
 			if (error) {
-				logger.error({text: 'Could not load chat history. (' + error + ')'});
+				logger.error('Could not load chat history. (' + error + ')');
 			} else {
 				_.each(plainObjs, function (msgObj) {
 					logger.log(msgObj);
@@ -156,17 +155,22 @@ $(function () {
 				signature: chat.user.signature(),
 				tags: 'unconfirmed'
 			}
-			// log message
-			var msgId = logger.log(plainObj);
-			logger.scrollToLatest();
 			// send message
-			chat.post(plainObj, function (error) {
-				if (error) {
-					logger.addTags(msgId, 'error');
-				} else {
-					logger.removeTags(msgId, 'unconfirmed');
-				}
-			});
+			if (socketapi.isConnected()) {
+				var message = chat.messager.cipherMessageFromPlainObj(plainObj);
+				socketapi.msg(chat.id, message);
+			} else {
+				// log message
+				var msgId = logger.log(plainObj);
+				logger.scrollToLatest();
+				chat.post(plainObj, function (error) {
+					if (error) {
+						logger.addTags(msgId, 'error');
+					} else {
+						logger.removeTags(msgId, 'unconfirmed');
+					}
+				});
+			}
 		});
 
 		// done.
@@ -177,62 +181,73 @@ $(function () {
 
 	loadFromHash();
 
-
-
-	// https://github.com/LearnBoost/socket.io/wiki/Exposed-events
-	var socket = io.connect('http://localhost:3000');
-	socket.on('connect', function () {
-		console.log('connected');
-	});
-	socket.on('disconnect', function () {
-		console.log('disconnected');
-	});
-	socket.on('chat/join', function (data) {
-		console.log('someone joined:', data.nick, data.sig);
+	// wire up socket-api
+	socketapi.events.connect = function (data) {
+		socketapi.join(
+			chat.id,
+			chat.serverKeyB64,
+			chat.user.nickCipher,
+			chat.user.signature()
+		);
+	};
+	socketapi.events.join = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick});
-		$('<li>').text(user.nick).appendTo($('#user-list'));
-	});
-	socket.on('chat/join/reply', function (data) {
+		$('<li>')
+			.text(user.nick)
+			.data('sig', data.sig)
+			.appendTo($('#user-list'));
+	};
+	socketapi.events.part = function (data) {
+		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick});
+		$('#user-list li').filter(function () {
+			return $(this).text() === user.nick && $(this).data('sig') === data.sig;
+		}).remove();
+	};
+	socketapi.events.message = function (data) {
+		var message = chat.messager.plainObjFromCipherMessage(data.msg);
+		if (!message.isGenuine()) {
+			logger.error('discarded a desynchronized message.');
+		} else {
+			logger.log(message);
+		}
+		logger.scrollToLatest();
+	};
+	socketapi.events.message_reply = function (data) {
+		if (data.error) {
+			// var msgId = …;
+			// logger.addTags(msgId, 'error');
+			logger.error(data.error);
+			// data.time
+		}
+	};
+	socketapi.events.join_reply = function (data) {
 		if (_.has(data, 'error')) {
 			console.log('chat/join error:', data.error);
 		} else {
 			console.log('joined.');
-			socket.emit('chat/names', {
-				id: chat.id
-			});
+			socketapi.names(chat.id);
 		}
-	});
-	socket.on('chat/names', function (data) {
+	};
+	socketapi.events.names_reply = function (data) {
 		console.log('list of live users:', data);
 		var user = new User({secretKey: chat.chatKey});
 		$('#user-list').empty();
 		_.each(data.infos, function (info) {
-			// var signature = info.sig;
+			var signature = info.sig;
 			user.nickCipher = info.nick;
-			$('<li>').text(user.nick).appendTo($('#user-list'));
+			$('<li>')
+				.text(user.nick)
+				.data('sig', signature)
+				.appendTo($('#user-list'));
 		});
-	});
-	socket.on('error', function (err) {
-		console.log('error:', err);
-	});
+	};
 
 	$('#join').click(function () {
-		if (socket.socket.connected) {
-			socket.emit('chat/join', {
-				id: chat.id,
-				key: chat.serverKeyB64,
-				us: chat.user.nickCipher,
-				sg: chat.user.signature()
-			});
+		if (socketapi.isConnected()) {
+			socketapi.events.connect();
+		} else {
+			socketapi.connect('http://localhost:3000');
 		}
-	});
-	$('#part').click(function () {
-		if (socket.socket.connected) {
-			var cmd = JSON.parse($('#message-input').val());
-			socket.emit(cmd.name, cmd.data);
-		}
-
-		// socket.disconnect();
 	});
 
 

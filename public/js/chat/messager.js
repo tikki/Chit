@@ -23,7 +23,7 @@ function Messager(secretKey) {
 
 /**
  * Constructs a message from given parameters.
- * @param {Object|Message} params - A Message-like Object, can also include a `signature` (a unique sender ID)
+ * @param {Object|Message} params - A Message or Message-like Object, can also include a `signature` (a unique sender ID)
  * @returns {String} JSON serialized cipher message.
  */
 Messager.prototype.cipherMessageFromPlainObj = function (params) {
@@ -46,18 +46,25 @@ Messager.prototype.plainObjFromCipherMessage = function (cipherMessage) {
 	var cipherObj = JSON.parse(cipherMessage);
 	var message = new Message(JSON.parse(this._crypto.decryptedStringFromObj(cipherObj)));
 	// add signature and server-timestamp.
-	return _.extend(message, {
-		signature: cipherObj.sg,
-		server_timestamp: cipherObj.ts
-	});
+	message.signature = cipherObj.sg;
+	message.serverTimestamp = cipherObj.ts;
+	return message;
 };
 
-// Message
-
 /**
- * A plain message as used by the Messager.
+ * Creates a datastructure representing a plain message as used by the Messager.
  * @constructur
- * @param {Object|Message} params
+ * @param {Object|Message} params - Data to create a new message from.
+ * @param {String} params.text
+ * @param {String} [params.pt] - same as text
+ * @param {String} [params.from]
+ * @param {String} [params.us] - same as from
+ * @param {Number} [params.timestamp]
+ * @param {Number} [params.ts] - same as timestamp
+ * @param {String} [params.msgId]
+ * @param {String[]|String} [params.tags] - Array or `.`-separated list of tags.
+ * @param {String} [params.signature]
+ * @param {Number} [params.serverTimestamp]
  */
 function Message(params) {
 	params = params || {};
@@ -67,10 +74,14 @@ function Message(params) {
 	this.from = params.from || params.us || null;
 	/** @public UTC timestamp (seconds since 1970-01-01 00:00:00 UTC). */
 	this.timestamp = params.timestamp || params.ts || parseInt(Date.now() / 1000); // Date.now() returns a UTC timestamp in ms
+	this.msgId = params.msgId || params.msgId || null;
+	this.tags = params.tags || params.msgId || null;
+	this.signature = params.signature || params.signature || null;
+	this.serverTimestamp = params.serverTimestamp || params.serverTimestamp || null;
 }
 
 /**
- * Returns a message as to be sent over the wire.
+ * Returns a normalized message as to be sent over the wire.
  * @returns {String} JSON serialized Message using the plain-message format.
  */
 Message.prototype.asPlainMessage = function () {
@@ -79,7 +90,18 @@ Message.prototype.asPlainMessage = function () {
 		ts: this.timestamp,
 		us: this.from
 	});
-}
+};
+
+/**
+ * Compares the timestamp to the server-timestamp to check if a message is plausibly genuine.
+ * @param {Number} [tolerance=3] - Seconds the timestamps are allowed to differ to be considered equal.
+ * @returns {Boolean}
+ */
+Message.prototype.isGenuine = function (tolerance) {
+	var d = Math.abs(this.timestamp - this.serverTimestamp);
+	var e = tolerance || 3;
+	return _.isFinite(d) && d < e;
+};
 
 Messager.prototype.Message = Message;
 

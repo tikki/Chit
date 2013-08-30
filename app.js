@@ -26,6 +26,13 @@ app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.cookieParser(config.cookiesecret));
 app.use(express.session());
+app.use(function(req, res, next) {
+	if(req.url.substr(-1) == '/' && req.url.length > 1) {
+		res.redirect(301, req.url.slice(0, -1));
+	} else {
+		next();
+	}
+});
 app.use(app.router);
 app.use(require('less-middleware')({ src: path.join(__dirname, 'public') }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -33,6 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // development only
 if ('development' == app.get('env')) {
 	app.use(express.errorHandler());
+	io.set('log level', 2);
 } else {
 	// production mode
 	io.set('log level', 1); // 0 = error; 1 = warn; 2 = info; 3 = debug
@@ -41,24 +49,27 @@ if ('development' == app.get('env')) {
 	io.set('browser client gzip', true);
 }
 
-// web routes
+// Add web routes.
 var web = require('./routes/web');
 app.get('/', web.index);
 app.get('/chat', web.chat)
-
-// REST API routes
-var restapi = require('./routes/api/1/rest');
 app.get('/api/1', web.api)
+
+// Add REST API routes.
+var restapi = require('./routes/api/1/rest');
 app.post('/api/1/chat', restapi.newChat);
 app.get('/api/1/chat/:id', restapi.chatData);
 app.put('/api/1/chat/:id', restapi.appendChatData);
 app.delete('/api/1/chat/:id', restapi.deleteChat);
 
-// socket.io API
-var socketapi = require('./routes/api/1/socketio').api;
-io.sockets.on('connection', socketapi);
+// Add Socket.IO API.
+var socketapi = require('./routes/api/1/socket-server').api;
+io.sockets.on('connection', function (socket) {
+	var sockets = this;
+	socketapi(sockets, socket);
+});
 
-// start server
+// All done - start the server.
 server.listen(app.get('port'), function () {
 	console.log('Express + Socket.IO server listening on port ' + app.get('port'));
 });

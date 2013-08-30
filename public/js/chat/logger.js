@@ -2,7 +2,11 @@
 define(["jquery", "underscore"], function ($, _) {
 
 /**
- * returns a String in format HH:mm:ss (local time) from a a UTC timestamp (seconds since 1970)
+ * @exports Logger
+ */
+
+/**
+ * @returns a String in format HH:mm:ss (local time) from a a UTC timestamp (seconds since 1970)
  */
 function prettyTime(timestamp) {
 	var time = new Date(timestamp * 1000);
@@ -12,11 +16,19 @@ function prettyTime(timestamp) {
 	}).join(":");
 }
 
+/**
+ * @constructor
+ * @param {HTML-Entity} ul - The ul where to log to.
+ */
 function Logger(ul) {
 	this.ul = $(ul);
 	this._newMessageId();
 }
 
+/**
+ * @private
+ * @returns {String} a new unique message ID.
+ */
 Logger.prototype._newMessageId = function () {
 	// We're using random to obscure how many messages have been sent.
 	// It's probably a silly feature, but it doesn't cost much, so why not.
@@ -27,9 +39,14 @@ Logger.prototype._newMessageId = function () {
 	}
 	var newId = this._messageId + _.random(1, stepSize);
 	this._messageId = newId + _.random(1, stepSize); // Do another step so the newId isn't stored permanently.
-	return newId;
+	return newId.toString();
 };
 
+/**
+ * Adds a tag (HTML class) to a message.
+ * @param {String} msgId - The message's unique ID.
+ * @param {Array|String} tags - Array or `.`-separated list of tags.
+ */
 Logger.prototype.addTags = function (msgId, tags) {
 	if (_.isString(tags)) {
 		tags = tags.split(".");
@@ -40,6 +57,11 @@ Logger.prototype.addTags = function (msgId, tags) {
 	});
 };
 
+/**
+ * Removes a tag (HTML class) from a message.
+ * @param {String} msgId - The message's unique ID.
+ * @param {String[]|String} tags - Array or `.`-separated list of tags.
+ */
 Logger.prototype.removeTags = function (msgId, tags) {
 	if (_.isString(tags)) {
 		tags = tags.split(".");
@@ -50,6 +72,11 @@ Logger.prototype.removeTags = function (msgId, tags) {
 	});
 };
 
+/**
+ * Add a new message to the log.
+ * @param {Object|Messager.Message} messageObj - Messager.Message compatible object.
+ * @returns {String} the new message's id.
+ */
 Logger.prototype.log = function (messageObj) {
 	// create new line
 	var msgId = messageObj.msgId || this._newMessageId();
@@ -77,12 +104,22 @@ Logger.prototype.log = function (messageObj) {
 	return msgId;
 };
 
-Logger.prototype.error = function (msgObj) {
-	msgObj.tags = msgObj.tags || [];
-	msgObj.tags.push('error');
-	this.log(msgObj);
+Logger.prototype.removeMessage = function (msgId) {
+	$("#msg-" + msgId).remove();
+}
+
+/**
+ * Shorthand to log an error message.
+ * @param {String} error - An error message to be logged.
+ * @returns {String} the new message's id.
+ */
+Logger.prototype.error = function (error) {
+	return this.log({text: error, tags: 'error'});
 };
 
+/**
+ * Scrolls the Logger's ul so the latest log message is visible.
+ */
 Logger.prototype.scrollToLatest = function () {
 	this.ul.scrollTop(this.ul[0].scrollHeight);
 };

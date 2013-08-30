@@ -51,6 +51,30 @@ function Chat() {
 }
 exports.Chat = Chat;
 
+/**
+ * Creates a new Chat instance and fills in all data from database, except `messages`.
+ * Use with caution! This object will contain the plaintext `key` and `secret`.
+ * Calling this function does not change the `touched` timestamp.
+ * @param {Function} callback - function(Chat)
+ * @static
+ */
+Chat.chatFromId = function (id, callback) {
+	var chat = new Chat({id: id});
+	var keys = ['secret', 'key', 'created', 'modified', 'touched'];
+	var dbKey = util.format('chat:%s:', id);
+	var terminator = _.last(keys);
+	_.each(keys, function (key) {
+		db.get(dbKey + key, function (err, value) {
+			if (!err) {
+				chat[key] = value;
+			}
+			if (key === terminator) {
+				callback(chat);
+			}
+		});
+	});
+}
+
 Chat.prototype.checkKey = function (callback) {
 	var self = this;
 	if (!_.isString(self.id)) {

@@ -1,10 +1,15 @@
 var _ = require('underscore');
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 
 var Chat = require('../../../models/chat.js').Chat;
 
 var transformSignature = require('./shared.js').transformSignature;
 
-// CRUD interface
+function CRUD () {}
+util.inherits(CRUD, EventEmitter);
+
+console.log('module CRUD was run');
 
 /*
 All functions return an Object.
@@ -14,13 +19,18 @@ The object either contains the requested data or a key `error`.
 /**
  * gives {id: new-unique-chat-id, secret: chat-administration-secret}
  */
-exports.create = function (callback, key) {
+CRUD.prototype.create = function (callback, key) {
+	var self = this;
 	new Chat({
 		key: key
 	}, function (chat) {
-		var result = _.isString(chat)
-			? {error: chat}
-			: {id: chat.id, secret: chat.secret};
+		var result;
+		if (_.isString(chat)) {
+			result = {error: chat};
+		} else {
+			result = {id: chat.id, secret: chat.secret};
+			self.emit('create', {id: chat.id, time: chat.created});
+		}
 		callback(result);
 	});
 };
@@ -31,14 +41,19 @@ exports.create = function (callback, key) {
  * messages is an array of cipher messages.
  * options is optional.
  */
-exports.read = function (callback, id, key) {
+CRUD.prototype.read = function (callback, id, key) {
+	var self = this;
 	new Chat({
 		id: id,
 		key: key
 	}).loadMessages(function (chat) {
-		var result = _.isString(chat)
-			? ({error: chat})
-			: ({messages: chat.messages});
+		var result;
+		if (_.isString(chat)) {
+			result = {error: chat};
+		} else {
+			result = {messages: chat.messages};
+			self.emit('read', {id: id, time: chat.touched});
+		}
 		callback(result);
 	});
 };
@@ -46,7 +61,8 @@ exports.read = function (callback, id, key) {
 /**
  * gives {time: utc-timestamp}
  */
-exports.update = function (callback, id, key, msg) {
+CRUD.prototype.update = function (callback, id, key, msg) {
+	var self = this;
 // 		- (impl. prop.:) a valid message has the format: encrypt_chat-key(message-counter,message-length,timestamp,message)
 // 	- (impl. prop.:) server adds new-chat-message-cipher to end of data blob, removes options:maxLineLength bytes at top
 // 	- server sends {'time': modified-timestamp, 'msg': new-chat-message-cipher} to all other connected clients
@@ -87,9 +103,13 @@ exports.update = function (callback, id, key, msg) {
 		id: id,
 		key: key
 	}).addMessage(msg, function (chat) {
-		var result = _.isString(chat)
-			? {error: chat}
-			: {time: chat.modified};
+		var result;
+		if (_.isString(chat)) {
+			result = {error: chat};
+		} else {
+			result = {time: chat.modified};
+			self.emit('update', {id: id, time: chat.modified, msg: msg});
+		}
 		callback(result);
 	});
 };
@@ -97,14 +117,21 @@ exports.update = function (callback, id, key, msg) {
 /**
  * gives {}
  */
-exports.delete = function (callback, id, secret) {
+CRUD.prototype.delete = function (callback, id, secret) {
+	var self = this;
 	new Chat({
 		id: id,
 		secret: secret
 	}).delete(function (chat) {
-		var result = _.isString(chat)
-			? {error: chat}
-			: {};
+		var result;
+		if (_.isString(chat)) {
+			result = {error: chat};
+		} else {
+			result = {};
+			self.emit('delete', {id: id});
+		}
 		callback(result);
 	});
 };
+
+exports.crud = new CRUD();
