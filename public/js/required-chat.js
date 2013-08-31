@@ -66,7 +66,7 @@ $(function () {
 		});
 
 		create.click(function () {
-			chat.chatKey = chat.newChatKey();
+			chat.updateWithConfig({chatKey: chat.newChatKey()});
 			chat.new(function (error) {
 				if (!error) {
 					chatId.val(chat.id);
