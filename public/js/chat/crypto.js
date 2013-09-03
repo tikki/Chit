@@ -21,6 +21,9 @@ function Crypto(secretKey) {
  * @returns {Object} An Object holding the ciphertext and the IV.
  */
 Crypto.prototype.encryptedObjFromString = function (plaintext) {
+	if (typeof plaintext !== 'string') {
+		throw TypeError('plaintext must be a string.');
+	}
 	plaintext = sjcl.codec.utf8String.toBits(plaintext);
 	var iv = sjcl.random.randomWords(4, 0);
 	var ct = sjcl.mode[cryptoParams.mode].encrypt(this._prp, plaintext, iv, cryptoParams.adata, cryptoParams.tagSize);
