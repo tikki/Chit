@@ -4,32 +4,54 @@ define(
 	function (_,    $,        singletons,        socketapi) {
 
 var commands = {
-	help: function () {
-		singletons.logger.log('Available commands: ' + _.sortBy(_.keys(commands), _.identity).join(', '));
-	},
-	nick: function (newNick) {
-		newNick = newNick[0].trim();
-		singletons.chat.user.nick = newNick;
-		singletons.chat.user.signature = null; // reset signature
-		singletons.logger.log('New nickname: ' + newNick);
-	},
-	sig: function (newSignature) {
-		newSignature = newSignature[0].trim();
-		singletons.chat.user.uid = newSignature;
-		singletons.chat.user.signature = null; // reset signature
-		singletons.logger.log('New signature set.');
-	},
-	connect: function () {
-		singletons.logger.log('Connecting…');
-		if (socketapi.isConnected()) {
-			socketapi.events.connect();
-		} else {
-			socketapi.connect(location.origin); /** @todo might be exploited, change to config */
+	help: {
+		help: '',
+		func: function (commandName) {
+			if (commandName) {
+				if (!commands[commandName]) {
+					return 'No such command.';
+				}
+				return '/' + commandName + ' ' + commands[commandName].help;
+			}
+			singletons.logger.log('Available commands: ' + _.sortBy(_.keys(commands), _.identity).join(', '));
+			singletons.logger.log('Type /help <command> for details on the command.');
 		}
 	},
-	disconnect: function () {
-		singletons.logger.log('Disconnecting…');
-		socketapi.disconnect();
+	nick: {
+		help: '<nickname>: Changes your current display name to <nickname>.',
+		func: function (newNick) {
+			newNick = newNick.trim();
+			singletons.chat.user.nick = newNick;
+			singletons.chat.user.signature = null; // reset signature
+			singletons.logger.log('New nickname: ' + newNick);
+		}
+	},
+	sig: {
+		help: '<signature>: Changes your current signature to <signature>.',
+		func: function (newSignature) {
+			newSignature = newSignature.trim();
+			singletons.chat.user.uid = newSignature;
+			singletons.chat.user.signature = null; // reset signature
+			singletons.logger.log('New signature set.');
+		}
+	},
+	connect: {
+		help: ': Connects to the server.',
+		func: function () {
+			singletons.logger.log('Connecting…');
+			if (socketapi.isConnected()) {
+				socketapi.events.connect();
+			} else {
+				socketapi.connect(location.origin); /** @todo might be exploited, change to config */
+			}
+		}
+	},
+	disconnect: {
+		help: ': Disconnects from the server.',
+		func: function () {
+			singletons.logger.log('Disconnecting…');
+			socketapi.disconnect();
+		}
 	}
 };
 
@@ -40,17 +62,39 @@ var commands = {
 function parseInput(text) {
 	if (text.slice(0, 1) === '/') {
 		var params = text.slice(1).split(' ');
-		var command = params.slice(0, 1);
+		var command = params.slice(0, 1)[0].toLowerCase();
 		params = params.slice(1);
-		if (commands[command]) {
-			return commands[command](params) || true;
+		if (!commands[command]) {
+			return command + ': unknown command.';
 		}
+		return commands[command].func.apply(this, params) || true;
 	}
 	return false;
 }
 
+var sentMessageBuffer = {
+	init: function (size) {
+		this._buf = new Array(size);
+		this._ptr = 0;
+	},
+	add: function (msg) {
+		// store msg
+		this._buf[this._ptr] = msg;
+		// update pointer
+		this._ptr = (this._ptr + 1) % this._buf.length;
+	},
+	get: function (i) {
+		i = Math.min(this._buf.length - 1, i);
+		i = this._ptr - 1 - i;
+		i = (i + this._buf.length) % this._buf.length;
+		return this._buf[i];
+	},
+	index: 0
+};
+sentMessageBuffer.init(20);
+
 $(function () {
-	var lastMsg = '';
+	// var msgBufferIndex = 0;
 	var logger = singletons.logger;
 	var chat = singletons.chat;
 	var msgInput = $('#message-input');
@@ -68,8 +112,9 @@ $(function () {
 			if (!text.length) {
 				return;
 			}
-			// store text
-			lastMsg = text;
+			// add current message to buffer & reset index
+			sentMessageBuffer.add(text);
+			sentMessageBuffer.index = 0;
 			// check if text is a command
 			var parsed = parseInput(text);
 			if (parsed !== false) {
@@ -107,12 +152,21 @@ $(function () {
 	}).keydown(function (event) {
 		if (event.keyCode == 38) { // cursor-up
 			event.preventDefault();
-			// load last message into input
-			msgInput.val(lastMsg);
+			// load next message from buffer into input
+			msgInput.val(sentMessageBuffer.get(sentMessageBuffer.index++));
 		} else if (event.keyCode == 40) { // cursor-down
 			event.preventDefault();
-			// store current message away
-			lastMsg = msgInput.val();
+			if (sentMessageBuffer.index > 0) {
+				// reset index
+				sentMessageBuffer.index = 0;
+			} else {
+				// add current message to buffer (without sending)
+				var msg = msgInput.val();
+				if (msg.length) {
+					sentMessageBuffer.add(msg);
+				}
+			}
+			// clear message input
 			msgInput.val('');
 		}
 	});
