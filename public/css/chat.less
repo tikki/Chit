@@ -1,26 +1,86 @@
-
 #args, #chat {
 	display: none;
 }
 
+// set up general page layout
+
+.row, .col { overflow: hidden; position: absolute; }
+.row { left: 0; right: 0; }
+.col { top: 0; bottom: 0; }
+.scroll-x, .scroll-y { -webkit-overflow-scrolling: touch; }
+.scroll-x { overflow-x: auto; }
+.scroll-y { overflow-y: auto; }
+
+header, #content, footer {
+	padding: 0 50px;
+}
+
+@header-height: 55px;
+@footer-height: 0;
+@userlist-width: 100px;
+@control-height: 1.2em;
+
+header {
+	.row;
+	height: @header-height;
+	top: 0;
+}
+
+#content {
+	.row;
+	top: @header-height;
+	bottom: @footer-height;
+}
+
+footer {
+	.row;
+	height: @footer-height;
+	bottom: 0;
+}
+
+#display {
+	.row;
+	.scroll-y;
+	top: 0;
+	bottom: @control-height;
+	#message-history {
+		.col;
+		.scroll-y;
+		left: 0;
+		right: @userlist-width;
+	}
+	#user-list {
+		.col;
+		.scroll-y;
+		width: @userlist-width;
+		right: 0;
+	}
+}
+#controls {
+	.row;
+	height: @control-height;
+	bottom: 0;
+}
+
+/* stylin' */
+
+// .list is a mixin
 .list {
-	outline: 1px solid black;
 	overflow: scroll;
 	font-size: .9em;
 	list-style: none;
-	padding-left: .8em;
+	li {
+		padding-left: .8em;
+	}
 }
 
 #user-list {
 	.list;
-	width: 150px;
-	height: 200px;
+	outline: 2px solid black;
 }
 
 #message-history {
 	.list;
-	width: 400px;
-	height: 100px;
 	.timestamp {
 		margin-right: 5px;
 		color: grey;
@@ -43,3 +103,15 @@
 .error {
 	color: red;
 }
+
+// controls
+
+#controls {
+	outline: 1px solid black;
+}
+#message-input {
+	width: 100%;
+	font-size: 1em;
+	padding: 0 .8em;
+}
+

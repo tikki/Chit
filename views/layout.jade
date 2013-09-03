@@ -7,6 +7,9 @@ html
 			if (required)
 				script(src="js/lib/require.js" data-main="js/required-#{required}")
 	body
-		block header
-		block content
-		block footer
+		header
+			block header
+		#content
+			block content
+		footer
+			block footer

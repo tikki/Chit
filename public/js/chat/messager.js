@@ -56,11 +56,11 @@ Messager.prototype.plainObjFromCipherMessage = function (cipherMessage) {
  * @constructur
  * @param {Object|Message} params - Data to create a new message from.
  * @param {String} params.text
- * @param {String} [params.pt] - same as text
+ * @param {String} [params.pt] - alias for text
  * @param {String} [params.from]
- * @param {String} [params.us] - same as from
+ * @param {String} [params.us] - alias for from
  * @param {Number} [params.timestamp]
- * @param {Number} [params.ts] - same as timestamp
+ * @param {Number} [params.ts] - alias for timestamp
  * @param {String} [params.msgId]
  * @param {String[]|String} [params.tags] - Array or `.`-separated list of tags.
  * @param {String} [params.signature]

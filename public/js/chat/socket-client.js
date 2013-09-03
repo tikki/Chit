@@ -44,7 +44,7 @@ return {
 	msg: function (chatId, message) {
 		__socket.emit('chat/msg', {
 			id: chatId,
-			mg: message
+			msg: message
 		});
 	},
 	join: function (chatId, serverKey, nickname, signature) {

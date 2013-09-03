@@ -9,8 +9,6 @@ var transformSignature = require('./shared.js').transformSignature;
 function CRUD () {}
 util.inherits(CRUD, EventEmitter);
 
-console.log('module CRUD was run');
-
 /*
 All functions return an Object.
 The object either contains the requested data or a key `error`.

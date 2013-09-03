@@ -24,8 +24,6 @@ app.use(express.logger('dev'));
 app.use(express.favicon());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
-app.use(express.cookieParser(config.cookiesecret));
-app.use(express.session());
 app.use(function(req, res, next) {
 	if(req.url.substr(-1) == '/' && req.url.length > 1) {
 		res.redirect(301, req.url.slice(0, -1));
@@ -56,7 +54,7 @@ app.get('/chat', web.chat)
 app.get('/api/1', web.api)
 
 // Add REST API routes.
-var restapi = require('./routes/api/1/rest');
+var restapi = require('./routes/api/1/rest-server');
 app.post('/api/1/chat', restapi.newChat);
 app.get('/api/1/chat/:id', restapi.chatData);
 app.put('/api/1/chat/:id', restapi.appendChatData);

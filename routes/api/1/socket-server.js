@@ -48,7 +48,7 @@ function appendChatData(sockets, data) {
 		Chat.chatFromId(chatId, function (chat) {
 			crud.update(function (reply) {
 				socket.emit('chat/msg:reply', reply);
-			}, chatId, chat.key, data.mg);
+			}, chatId, chat.key, data.msg);
 		});
 	}
 }

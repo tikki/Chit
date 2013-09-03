@@ -1,5 +1,5 @@
 "use strict";
-define(["jquery", "underscore"], function ($, _) {
+define(['jquery', 'underscore', 'chat/user'], function ($, _, User) {
 
 /**
  * @exports Logger
@@ -51,7 +51,7 @@ Logger.prototype.addTags = function (msgId, tags) {
 	if (_.isString(tags)) {
 		tags = tags.split(".");
 	}
-	var msg = $("#msg-" + msgId);
+	var msg = this.msgElement(msgId);
 	_.each(tags, function (tag) {
 		msg.addClass(tag);
 	});
@@ -66,7 +66,7 @@ Logger.prototype.removeTags = function (msgId, tags) {
 	if (_.isString(tags)) {
 		tags = tags.split(".");
 	}
-	var msg = $("#msg-" + msgId);
+	var msg = this.msgElement(msgId);
 	_.each(tags, function (tag) {
 		msg.removeClass(tag);
 	});
@@ -74,21 +74,31 @@ Logger.prototype.removeTags = function (msgId, tags) {
 
 /**
  * Add a new message to the log.
- * @param {Object|Messager.Message} messageObj - Messager.Message compatible object.
+ * @param {Object|Messager.Message|String} message - Messager.Message compatible Object or text.
  * @returns {String} the new message's id.
  */
-Logger.prototype.log = function (messageObj) {
+Logger.prototype.log = function (message) {
+	if (_.isString(message)) {
+		message = {text: message};
+	}
+	// check for User
+	if (message.from instanceof User) {
+		var user = message.from;
+		message.from = user.nick;
+		message.signature = user.signature;
+		message.color = user.color;
+	}
 	// create new line
-	var msgId = messageObj.msgId || this._newMessageId();
+	var msgId = message.msgId || this._newMessageId();
 	var newLine = $("<li>", {
 		"class": "message",
 		id: "msg-" + msgId
 	}).appendTo(this.ul);
 	// add line content
 	var params = [
-		["timestamp", prettyTime(messageObj.timestamp || parseInt(Date.now() / 1000))],
-		["from", messageObj.from],
-		["text", messageObj.text]
+		["timestamp", prettyTime(message.timestamp || parseInt(Date.now() / 1000))],
+		["from", message.from],
+		["text", message.text]
 	];
 	_.each(params, function (e) {
 		var name = e[0], value = e[1];
@@ -98,14 +108,23 @@ Logger.prototype.log = function (messageObj) {
 				.appendTo(newLine);
 		}
 	});
+	// add nick color
+	message.color = message.color || User.calculateColor(message.from, message.signature);
+	if (message.color) {
+		newLine.find('.from').css('color', message.color);
+	}
 	// add tags
-	this.addTags(msgId, messageObj.tags);
+	this.addTags(msgId, message.tags);
 	// done.
 	return msgId;
 };
 
 Logger.prototype.removeMessage = function (msgId) {
-	$("#msg-" + msgId).remove();
+	this.msgElement(msgId).remove();
+}
+
+Logger.prototype.msgElement = function(msgId) {
+	return $("#msg-" + msgId);
 }
 
 /**

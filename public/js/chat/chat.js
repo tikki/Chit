@@ -1,113 +1,123 @@
 define(
-	["jquery", "underscore", "sjcl", "chat/messager", "chat/cryptoParams", "chat/user"],
-	function ($, _, sjcl, Messager, cryptoParams, User) {
+	['jquery', 'underscore', 'sjcl', 'chat/messager', 'chat/cryptoParams', 'chat/user', 'chat/rest-client', 'chat/socket-client'],
+	function ($, _,           sjcl,   Messager,        cryptoParams,        User,        restapi,            socketapi) {
 
-var apiBaseUrl = "api/1/chat";
-
-function Chat(config) {
-	this.updateWithConfig(config);
+function asBase64(bitarray, forUrl) {
+	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
 }
 
-Chat.prototype.updateWithConfig = function (config) {
-	config = config || {};
-	// ivars
-	this.id = config.id || this.id || null; // unique id
-	this.secret = config.secret || this.secret || null; // secret used to administer the chat (delete, change options, ...)
-	this.messager = config.messager || this.messager || null;
-	this.user = config.user || this.user || null;
-	// this.messages = config.messages || this.messages || null; // chronologically sorted list of messages
-	this.setChatKey(config.chatKey || this.chatKey || this.newChatKey()); // secret key used for encryption & derivation (MUST NOT be transmitted)
-	this.updateServerKey(); // key used for authentification by the server
-	// update url & user.id
-	this.url = apiBaseUrl + "/" + this.id;
-	this.user.chatId = this.id;
-};
+function fromBase64(base64, fromUrl) {
+	return sjcl.codec.base64.toBits(base64, fromUrl);
+}
 
-Chat.prototype.setChatKey = function (chatKey) {
-	if (_.isArray(chatKey)) {
-		this.chatKey = chatKey;
-		this.chatKeyB64 = sjcl.codec.base64.fromBits(chatKey, 1, 1);
+/**
+ * getters and setters used to manage Chat properties
+ */
+function _getId() {
+	return this._id;
+}
+/**
+ * Updates id and user.chatId.
+ */
+function _setId(id) {
+	this._id = id;
+	if (this.user) {
+		this.user.chatId = id;
+	}
+}
+function _getChatKey() {
+	return this._chatKey;
+}
+/**
+ * Updates chatKey, serverKey, messager, and user.
+ * @param {sjcl.bitArray|String|null} chatKey - A bitArray or BASE64 encoded String, or `null` to generate a new random key.
+ */
+function _setChatKey(chatKey) {
+	this._serverKey = null; // reset serverKey
+	// handle new chatKey
+	if (_.isNull(chatKey)) {
+		// generate a new chat key
+		this._chatKey = sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
+	} else if (_.isArray(chatKey)) {
+		this._chatKey = chatKey;
 	} else {
-		this.chatKey = sjcl.codec.base64.toBits(chatKey, 1);
-		this.chatKeyB64 = chatKey;
+		this._chatKey = fromBase64(chatKey, 1);
 	}
 	// update messager & user
-	this.messager = new Messager(this.chatKey);
-	this.user = new User(_.extend(this.user || {}, {secretKey: this.chatKey}));
+	this.messager = new Messager(this._chatKey);
+	this.user = new User(_.extend(this.user || {}, {secretKey: this._chatKey}));
+}
+function _getServerKey() {
+	if (_.isNull(this._serverKey)) {
+		this._serverKey = sjcl.hash.sha256.hash(this._chatKey); // cannot easily add + this.id here, b/c id is not yet available when creating a new chat. :/
+	}
+	return this._serverKey;
+}
+function _setServerKey() {
+	throw new Error('serverKey is immutable.');
 }
 
-Chat.prototype.newChatKey = function () {
-	return sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
-};
-
-Chat.prototype.updateServerKey = function () {
-	this.serverKey = sjcl.hash.sha256.hash(this.chatKey); // cannot easily add + this.id here, b/c id is not yet available when creating a new chat. :/
-	this.serverKeyB64 = sjcl.codec.base64.fromBits(this.serverKey, 1);
-};
+/**
+ * id
+ * secret
+ * messager
+ * user
+ * chatKey
+ * serverKey
+ */
+function Chat(config) {
+	config = config || {};
+	/** @private */
+	this._id = null; // managed as property
+	this._chatKey = null; // managed as property
+	this._serverKey = null; // managed as property
+	/** @public properties */
+	Object.defineProperty(this, 'id', {
+		get: _getId,
+		set: _setId
+	});
+	Object.defineProperty(this, 'chatKey', {
+		get: _getChatKey,
+		set: _setChatKey
+	});
+	Object.defineProperty(this, 'serverKey', {
+		get: _getServerKey,
+		set: _setServerKey
+	});
+	this.secret = config.secret || null; // secret used to administer the chat (delete, change options, ...)
+	this.messager = config.messager || null;
+	this.user = config.user || null;
+	/** we're setting `id` *after* `user`, because id updates user */
+	this.id = config.id || null; // unique id
+	/** we're setting `chatKey` after `user` and `messager` because both are updated */
+	this.chatKey = config.chatKey || null; // secret key used for encryption & derivation (MUST NOT be transmitted)
+}
 
 // CRUD
 
 Chat.prototype.new = function (callback) {
 	var self = this;
-	var error = false;
-	$.ajax({
-		type: "POST",
-		url: apiBaseUrl,
-		data: {key: self.serverKeyB64},
-		success: function (data) {
-			if (data.error) {
-				error = data.error || true;
-			} else {
-				console.log("Chat: created.");
-				// self.id = data.id;
-				// self.secret = data.secret;
-				self.updateWithConfig({id: data.id, secret: data.secret});
-			}
-		},
-		complete: function (xhr, status) {
-			if (_.isFunction(callback)) {
-				error = error || status !== 'success';
-				callback.call(self, error);
-			}
-		},
-		dataType: "json"
+	restapi.create(asBase64(self.serverKey), function (reply) {
+		if (!reply.error) {
+			console.log("Chat: created.");
+			self.id = reply.id;
+			self.secret = reply.secret;
+		}
+		if (_.isFunction(callback)) {
+			callback.call(self, reply.error || false);
+		}
 	});
 };
 
 Chat.prototype.loadHistory = function (callback) {
 	var self = this;
-	var error = false;
-	var plainObjs = [];
-	$.ajax({
-		type: "GET",
-		url: self.url,
-		data: {key: self.serverKeyB64},
-		success: function (data) {
-			if (data.error) {
-				error = data.error || true;
-			} else {
-				_.each(data.messages, function (cipherMessage) {
-					try {
-						var plainObj = self.messager.plainObjFromCipherMessage(cipherMessage);
-						plainObjs.push(plainObj);
-					} catch (err) {
-						plainObjs.push({
-							tags: ['error'],
-							text: err.message
-						});
-					}
-				});
-				console.log("Chat: loadHistory.");
-				// self.messages = data;
-			}
-		},
-		complete: function (xhr, status) {
-			if (_.isFunction(callback)) {
-				error = error || status !== 'success';
-				callback.call(self, plainObjs, error);
-			}
-		},
-		dataType: "json"
+	restapi.read(self.id, asBase64(self.serverKey), self.messager, function (reply) {
+		if (!reply.error) {
+			console.log("Chat: read.");
+		}
+		if (_.isFunction(callback)) {
+			callback.call(self, reply.messages || [], reply.error || false);
+		}
 	});
 };
 
@@ -118,62 +128,36 @@ Chat.prototype.loadHistory = function (callback) {
  */
 
 /**
- * @param {Object|Messager.Message} plainObj - Message or Message-like object.
+ * @param {Object|Messager.Message} message - Message or Message-like object.
  * @param {Chat~chatCallback} callback
  */
-Chat.prototype.post = function (plainObj, callback) {
+Chat.prototype.post = function (message, callback) {
 	var self = this;
-	var error = false;
-	// build cipher message
-	var ciphertext = self.messager.cipherMessageFromPlainObj(plainObj);
-	// send cipher message
-	$.ajax({
-		type: "PUT",
-		url: self.url,
-		data: {
-			key: self.serverKeyB64,
-			msg: ciphertext
-		},
-		success: function (data) {
-			if (data.error) {
-				error = data.error || true;
-			} else {
-				console.log("Chat: posted.", data.time);
+	var cipherMessage = self.messager.cipherMessageFromPlainObj(message);
+	if (socketapi.isConnected()) {
+		socketapi.msg(self.id, cipherMessage);
+		callback.call(self, 'HACK--sent-via-socket'); // let's inform the caller that it was sent via socket; it's the best we can do. :|
+	} else {
+		restapi.update(self.id, asBase64(self.serverKey), cipherMessage, function (reply) {
+			if (!reply.error) {
+				console.log("Chat: updated.");
 			}
-		},
-		complete: function (xhr, status) {
 			if (_.isFunction(callback)) {
-				error = error || status !== 'success';
-				callback.call(self, error);
+				callback.call(self, reply.error || false);
 			}
-		},
-		dataType: "json"
-	});
+		});
+	}
 };
 
 Chat.prototype.delete = function (callback) {
 	var self = this;
-	var error = false;
-	$.ajax({
-		type: "DELETE",
-		url: self.url,
-		data: {
-			secret: self.secret
-		},
-		success: function (data) {
-			if (data.error) {
-				error = data.error || true;
-			} else {
-				console.log("Chat: deleted.");
-			}
-		},
-		complete: function (xhr, status) {
-			if (_.isFunction(callback)) {
-				error = error || status !== 'success';
-				callback.call(self, error);
-			}
-		},
-		dataType: "json"
+	restapi.delete(self.id, self.secret, function (reply) {
+		if (!reply.error) {
+			console.log("Chat: deleted.");
+		}
+		if (_.isFunction(callback)) {
+			callback.call(self, reply.error || false);
+		}
 	});
 };
 
