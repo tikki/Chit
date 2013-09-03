@@ -1,0 +1,18 @@
+{
+	"port": 6699,
+	"cookiesecret": PUT_A_LONG_UNIQUE_RANDOM_STRING_HERE,
+	"secretLength": 36,
+	"minKeyLength": 32,
+	"maxKeyLength": 64,
+	"message": {
+		"length": 256,
+		"count": 100
+	},
+	"maxUsernameLength": 20,
+	"api_1": {
+		"signature": {
+			"algorithm": "md5",
+			"key": PUT_A_LONG_UNIQUE_RANDOM_STRING_HERE
+		}
+	}
+}
