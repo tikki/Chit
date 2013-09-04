@@ -95,21 +95,6 @@ $(function () {
 
 		chat.id = id;
 		chat.chatKey = chatKey;
-
-		// load history
-		logger.log('Loading chat history…');
-		chat.loadHistory(function (plainObjs, error) {
-			if (error) {
-				logger.error('Could not load chat history. (' + error + ')');
-			} else {
-				logger.log('--- History start ---');
-				_.each(plainObjs, function (msgObj) {
-					logger.log(msgObj);
-				});
-				logger.log('--- History end ---');
-			}
-			logger.scrollToLatest();
-		});
 	}
 
 	// wire up socket-api
@@ -145,6 +130,9 @@ $(function () {
 		if (!message.isGenuine()) {
 			logger.error('Discarded a desynchronized message.');
 		} else {
+			if (message.text.indexOf(chat.user.nick) !== -1) {
+				message.tags = 'highlight';
+			}
 			logger.log(message);
 		}
 		logger.scrollToLatest();
@@ -163,6 +151,24 @@ $(function () {
 			// socketapi.disconnect();
 		} else {
 			logger.log('Joined chat#' + chat.id + '.');
+			// load history
+			logger.log('Loading chat history…');
+			chat.loadHistory(function (plainObjs, error) {
+				if (error) {
+					logger.error('Could not load chat history. (' + error + ')');
+				} else {
+					logger.log('--- History start ---');
+					_.each(plainObjs, function (msgObj) {
+						if (msgObj.text.indexOf(chat.user.nick) !== -1) {
+							msgObj.tags = 'highlight';
+						}
+						logger.log(msgObj);
+					});
+					logger.log('--- History end ---');
+				}
+				logger.scrollToLatest();
+			});
+			// load list of other connected users
 			logger.log('Requesting names…');
 			socketapi.names(chat.id);
 		}
@@ -179,7 +185,10 @@ $(function () {
 				user.signature = info.sig;
 				user.nickCipher = info.nick;
 				user.color = null; // reset color
-				userlist.add(new User(user));
+				var li = userlist.add(new User(user));
+				if (user.nick === chat.user.nick) {
+					li.addClass('highlight');
+				}
 			});
 		}
 	};

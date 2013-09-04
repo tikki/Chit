@@ -9,9 +9,9 @@ var commands = {
 		func: function (commandName) {
 			if (commandName) {
 				if (!commands[commandName]) {
-					return 'No such command.';
+					return singletons.logger.log('No such command.');
 				}
-				return '/' + commandName + ' ' + commands[commandName].help;
+				return singletons.logger.log('/' + commandName + ' ' + commands[commandName].help);
 			}
 			singletons.logger.log('Available commands: ' + _.sortBy(_.keys(commands), _.identity).join(', '));
 			singletons.logger.log('Type /help <command> for details on the command.');
@@ -20,15 +20,26 @@ var commands = {
 	nick: {
 		help: '<nickname>: Changes your current display name to <nickname>.',
 		func: function (newNick) {
+			if (!newNick) {
+				return commands.help.func('nick');
+			}
+			if (socketapi.isConnected()) {
+				return singletons.logger.log('[known bug] Cannot change nick while connected. (sorry :/)');
+			}
 			newNick = newNick.trim();
 			singletons.chat.user.nick = newNick;
 			singletons.chat.user.signature = null; // reset signature
 			singletons.logger.log('New nickname: ' + newNick);
+			// automatically connect
+			commands.connect.func();
 		}
 	},
 	sig: {
 		help: '<signature>: Changes your current signature to <signature>.',
 		func: function (newSignature) {
+			if (!newSignature) {
+				return commands.help.func('sig');
+			}
 			newSignature = newSignature.trim();
 			singletons.chat.user.uid = newSignature;
 			singletons.chat.user.signature = null; // reset signature
@@ -38,6 +49,9 @@ var commands = {
 	connect: {
 		help: ': Connects to the server.',
 		func: function () {
+			if (!singletons.chat.user.nick) {
+				return singletons.logger.log('Please use /nick to set a nickname first.');
+			}
 			singletons.logger.log('Connecting…');
 			if (socketapi.isConnected()) {
 				socketapi.events.connect();
@@ -46,13 +60,13 @@ var commands = {
 			}
 		}
 	},
-	disconnect: {
-		help: ': Disconnects from the server.',
-		func: function () {
-			singletons.logger.log('Disconnecting…');
-			socketapi.disconnect();
-		}
-	}
+	// disconnect: {
+	// 	help: ': Disconnects from the server.',
+	// 	func: function () {
+	// 		singletons.logger.log('Disconnecting…');
+	// 		socketapi.disconnect();
+	// 	}
+	// }
 };
 
 /**
@@ -65,9 +79,11 @@ function parseInput(text) {
 		var command = params.slice(0, 1)[0].toLowerCase();
 		params = params.slice(1);
 		if (!commands[command]) {
-			return command + ': unknown command.';
+			singletons.logger.log(command + ': unknown command.');
+		} else {
+			commands[command].func.apply(this, params);
 		}
-		return commands[command].func.apply(this, params) || true;
+		return true;
 	}
 	return false;
 }
@@ -117,13 +133,13 @@ $(function () {
 			sentMessageBuffer.index = 0;
 			// check if text is a command
 			var parsed = parseInput(text);
-			if (parsed !== false) {
-				event.preventDefault();
-				if (_.isString(parsed)) {
-					logger.log(parsed);
+			logger.scrollToLatest();
+			if (parsed === false) {
+				// enforce socket connection
+				if (!socketapi.isConnected()) {
+					commands.connect.func();
+					return;
 				}
-				logger.scrollToLatest();
-			} else {
 				// build plain-message object
 				var message = {
 					text: text,
@@ -170,7 +186,10 @@ $(function () {
 			msgInput.val('');
 		}
 	});
-	_.delay(function () { logger.log('Type /help for a list of commands.') }, 100); /** @todo relying on a delay is bad. */
+	_.delay(function () {
+		logger.log('Type /help for a list of commands.');
+		logger.log('Type /nick <nickname> to set a nickname and connect.');
+	}, 100); /** @todo relying on a delay is bad. */
 });
 
 });

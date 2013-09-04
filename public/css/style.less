@@ -4,20 +4,26 @@
 	margin: 0;
 }
 
+// define some colors
+@highlight: #DDB304;
+@link: #0070FF;
+@background: #eee;
+
+//
 body {
 	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-	background-color: #eee;
+	background-color: @background;
 }
 
 header {
-	background-color: #DDB304;
+	background-color: @highlight;
 	h1 {
 		padding-top: 20px;
 	}
 }
 
 a {
-	color: #00B7FF;
+	color: @link;
 }
 
 input {

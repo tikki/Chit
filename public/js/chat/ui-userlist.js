@@ -33,6 +33,7 @@ Userlist.prototype.add = function(user) {
 	_.each(users, function (user) {
 		self.ul.append(user.li);
 	});
+	return li;
 };
 
 Userlist.prototype.remove = function(userToRemove) {
