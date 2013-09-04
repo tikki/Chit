@@ -31,6 +31,14 @@ function asBase64(bitarray, forUrl) {
 }
 
 // website interaction
+$(document).on('click', 'a.auto-link', function (event) {
+	var url = $(this).attr('href');
+	// if (!confirm('You are about to open this URL:\n' + url)) {
+		event.preventDefault();
+	// } else {
+		window.open(url, '_blank'); // force to open in new tab
+	// }
+});
 
 $(function () {
 	// pull singletons into local namespace and connect to DOM elements

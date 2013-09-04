@@ -1,5 +1,5 @@
 "use strict";
-define(['jquery', 'underscore', 'chat/user'], function ($, _, User) {
+define(['jquery', 'underscore', 'chat/user', 'chat/url'], function ($, _, User, url) {
 
 /**
  * @exports Logger
@@ -108,10 +108,13 @@ Logger.prototype.log = function (message) {
 				.appendTo(newLine);
 		}
 	});
+	// create text links
+	var textElement = newLine.children('.text');
+	textElement.html(url.replaceUrlsWithHtmlLinks(textElement.html()));
 	// add nick color
 	message.color = message.color || User.calculateColor(message.from, message.signature);
 	if (message.color) {
-		newLine.find('.from').css('color', message.color);
+		newLine.children('.from').css('color', message.color);
 	}
 	// add tags
 	this.addTags(msgId, message.tags);
