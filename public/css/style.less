@@ -1,11 +1,14 @@
 // reset much?
-* {
+html, body, ul, li, p, a, input, h1, h2, div, span, header, footer {
 	padding: 0;
 	margin: 0;
+	border: none;
+	outline: none;
 }
 
 // define some colors
 @highlight: #DDB304;
+@downlight: darken(@highlight, 10%);
 @link: #0070FF;
 @background: #eee;
 
@@ -18,17 +21,74 @@ body {
 header {
 	background-color: @highlight;
 	h1 {
-		padding-top: 20px;
+		padding-top: 15px;
+		font-size: 2.5em;
 	}
+}
+
+footer {
+	background-color: @highlight;
+	text-align: right;
+}
+
+header, #content, footer {
+	padding: 0 35px;
 }
 
 a {
 	color: @link;
 }
 
+p {
+	margin: .5em 0;
+}
+
+h2 {
+	margin-top: .5em;
+}
+
 input {
 	border: 0;
 	background: none;
+}
+
+// set up general page layout
+
+.row, .col { overflow: hidden; position: absolute; }
+.row { left: 0; right: 0; }
+.col { top: 0; bottom: 0; }
+.scroll-x, .scroll-y { -webkit-overflow-scrolling: touch; }
+.scroll-x { overflow-x: auto; }
+.scroll-y { overflow-y: auto; }
+
+@header-height: 55px;
+@footer-height: 0;
+
+header {
+	.row;
+	height: @header-height;
+	top: 0;
+}
+
+#content {
+	.row;
+	top: @header-height;
+	bottom: @footer-height;
+}
+
+footer {
+	.row;
+	height: @footer-height;
+	bottom: 0;
+}
+
+// index
+
+.full-page {
+	.row;
+	.col;
+	.scroll-y;
+	padding: 25px;
 }
 
 @import "chat.less";

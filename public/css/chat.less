@@ -2,41 +2,10 @@
 	display: none;
 }
 
-// set up general page layout
+// general page layout
 
-.row, .col { overflow: hidden; position: absolute; }
-.row { left: 0; right: 0; }
-.col { top: 0; bottom: 0; }
-.scroll-x, .scroll-y { -webkit-overflow-scrolling: touch; }
-.scroll-x { overflow-x: auto; }
-.scroll-y { overflow-y: auto; }
-
-header, #content, footer {
-	padding: 0 50px;
-}
-
-@header-height: 55px;
-@footer-height: 0;
 @userlist-width: 100px;
-@control-height: 1.2em;
-
-header {
-	.row;
-	height: @header-height;
-	top: 0;
-}
-
-#content {
-	.row;
-	top: @header-height;
-	bottom: @footer-height;
-}
-
-footer {
-	.row;
-	height: @footer-height;
-	bottom: 0;
-}
+@control-height: 1.6em;
 
 #display {
 	.row;
@@ -62,9 +31,18 @@ footer {
 	bottom: 0;
 }
 
-/* stylin' */
+// stylin'
 
-// .list is a mixin
+#content {
+	outline: 1px solid @downlight;
+}
+
+// notification question
+#notification-yes {
+	margin-left: 15px;
+}
+
+// @mixin
 .list {
 	overflow: scroll;
 	font-size: .9em;
@@ -73,12 +51,11 @@ footer {
 		padding-left: .8em;
 	}
 }
-
 #user-list {
 	.list;
-	outline: 2px solid black;
+	outline: 2px dashed black;
+	background-color: @background;
 }
-
 #message-history {
 	.list;
 	.timestamp {
@@ -109,12 +86,30 @@ footer {
 
 // controls
 
-#controls {
-	outline: 1px solid black;
-}
 #message-input {
 	width: 100%;
 	font-size: 1em;
-	padding: 0 .8em;
+	padding: .2em .8em;
 }
 
+// gradients
+
+// @mixin
+.gradient-overlay {
+	display: none;
+	height: 8px;
+	position: absolute;
+	width: 100%;
+}
+#gradient-overlay-top {
+	.gradient-overlay;
+	top: 0;
+	background: -webkit-linear-gradient(bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.2) 100%); // Chrome10+,Safari5.1+
+	background: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.2) 100%); // W3C
+}
+#gradient-overlay-bottom {
+	.gradient-overlay;
+	bottom: 0;
+	background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.2) 100%); // Chrome10+,Safari5.1+
+	background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0.2) 100%); // W3C
+}

@@ -40,6 +40,7 @@ $(document).on('click', 'a.auto-link', function (event) {
 	// }
 });
 
+
 $(function () {
 	// pull singletons into local namespace and connect to DOM elements
 	var userlist = singletons.userlist;
@@ -51,6 +52,8 @@ $(function () {
 	// set references
 	var chatPane = $('#chat');
 	var argsPane = $('#args');
+	var footer   = $('footer');
+	var content  = $('#content');
 
 	// watch location hash
 	function loadFromHash() {
@@ -67,6 +70,67 @@ $(function () {
 		loadFromHash();
 	});
 	loadFromHash();
+
+	// set up notifications
+	if ((window.webkitNotifications && webkitNotifications.checkPermission() === 1) // webkit; 0: allowed, 1: not allowed, 2: denied
+		|| (window.Notification && Notification.permission === 'default')) { // granted, default, denied
+		setFooterHeight(33);
+	}
+	try { // set Notification.permission for Webkit (it doesn't implement this yet)
+		Notification.permission = webkitNotifications.checkPermission() === 0 ? 'granted' : 'default';
+	} catch (err) {}
+	function notify(message) {
+		if (Notification.permission === 'granted') {
+			var n = new Notification('Chit', {
+				body: message,
+				tag: 'ChitNotification'
+			});
+			n.onshow = function () {
+				setTimeout(function () { n.close(); }, 3000); // need to wrap this for current Chrome to work.
+			}
+		}
+	}
+	$('#notification-yes').click(function () {
+		setFooterHeight(0);
+		Notification.requestPermission(function (status) {
+			// This allows to use Notification.permission with Chrome/Safari
+			if (Notification.permission !== status) {
+				Notification.permission = status;
+			}
+		});
+	});
+	$('#notification-no').click(function () {
+		setFooterHeight(0);
+	});
+	function setFooterHeight(height) {
+		content.animate({
+			'bottom': height
+		});
+		footer.animate({
+			'height': height
+		});
+	}
+
+	// show gradient-overlay when we're not scrolled all the way to the bottom
+	var msgHistory = $('#message-history');
+	var gradientTop = $('#gradient-overlay-top');
+	var gradientBottom = $('#gradient-overlay-bottom');
+	msgHistory.scroll(function (event) {
+		// top gradient
+		if (msgHistory.scrollTop()) {
+			gradientTop.show();
+		} else {
+			gradientTop.hide();
+		}
+		// bottom gradient
+		var lastChild = msgHistory.children(':last');
+		var lastChildBottom = lastChild.position().top + lastChild.height() - 1; // add a pixel for tolerance
+		if (lastChildBottom > msgHistory.height()) {
+			gradientBottom.show();
+		} else {
+			gradientBottom.hide();
+		}
+	});
 
 	// show chat parameters view
 	function showArgs() {
@@ -130,8 +194,13 @@ $(function () {
 		if (!message.isGenuine()) {
 			logger.error('Discarded a desynchronized message.');
 		} else {
-			if (message.text.indexOf(chat.user.nick) !== -1) {
+			var text = message.text;
+			if (new RegExp('\\b' + chat.user.nick + '\\b', 'i').test(text)) {
 				message.tags = 'highlight';
+				if (text.length > 100) {
+					text = text.slice(0, 100) + '…';
+				}
+				notify('<' + message.from + '> ' + text);
 			}
 			logger.log(message);
 		}
@@ -158,8 +227,9 @@ $(function () {
 					logger.error('Could not load chat history. (' + error + ')');
 				} else {
 					logger.log('--- History start ---');
+					var regex = new RegExp('\\b' + chat.user.nick + '\\b', 'i');
 					_.each(plainObjs, function (msgObj) {
-						if (msgObj.text.indexOf(chat.user.nick) !== -1) {
+						if (regex.test(msgObj.text)) {
 							msgObj.tags = 'highlight';
 						}
 						logger.log(msgObj);

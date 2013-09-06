@@ -3,8 +3,14 @@ extends layout
 block header
 	h1 Chit
 
+block footer
+	p
+		| Hey, wouldn't it be cool if you were notified when someone mentions you?
+		button#notification-yes Yeah!
+		button#notification-no Nah…
+
 block content
-	#args
+	#args.full-page
 		//- p.
 		//- 	To join an existing chat, you need to know its <em>ID</em> and <em>key</em>.
 		//- input(type="text", placeholder="ID")#chat-id
@@ -17,10 +23,8 @@ block content
 	#chat
 		#display
 			ul#message-history
+			#gradient-overlay-top
+			#gradient-overlay-bottom
 			ul#user-list
 		#controls
-			//- input(type="text", placeholder="nick")#nickname-input
-			//- input(type="password", placeholder="unique ID")#signature-input
 			input(type="text", placeholder="Type your message here, press return to send.")#message-input
-			//- button#send-message send
-			//- button#connect go live
