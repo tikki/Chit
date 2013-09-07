@@ -13,7 +13,7 @@ var commands = {
 				}
 				return singletons.logger.log('/' + commandName + ' ' + commands[commandName].help);
 			}
-			singletons.logger.log('Available commands: ' + _.sortBy(_.keys(commands), _.identity).join(', '));
+			singletons.logger.log('Available commands: ' + _.keys(commands).sort().join(', '));
 			singletons.logger.log('Type /help <command> for details on the command.');
 		}
 	},
@@ -110,10 +110,15 @@ var sentMessageBuffer = {
 sentMessageBuffer.init(20);
 
 $(function () {
-	// var msgBufferIndex = 0;
+	// references
 	var logger = singletons.logger;
 	var chat = singletons.chat;
+	var completor = singletons.completor;
 	var msgInput = $('#message-input');
+	// add commands to auto-completer
+	_.each(commands, function (value, key) {
+		completor.add('/' + key);
+	});
 	// auto-focus on msg input when typing on the page
 	$('html').keypress(function () {
 		msgInput.focus();
@@ -166,11 +171,11 @@ $(function () {
 			}
 		};
 	}).keydown(function (event) {
-		if (event.keyCode == 38) { // cursor-up
+		if (event.keyCode === 38) { // 38: cursor-up
 			event.preventDefault();
 			// load next message from buffer into input
 			msgInput.val(sentMessageBuffer.get(sentMessageBuffer.index++));
-		} else if (event.keyCode == 40) { // cursor-down
+		} else if (event.keyCode === 40) { // 40: cursor-down
 			event.preventDefault();
 			if (sentMessageBuffer.index > 0) {
 				// reset index
@@ -184,6 +189,15 @@ $(function () {
 			}
 			// clear message input
 			msgInput.val('');
+		} else if (event.keyCode === 9) { // 9: tab
+			event.preventDefault();
+			var msgElement = msgInput[0];
+			var pos  = msgElement.selectionStart;
+			var text = msgInput.val();
+			// set completion text & cursor position
+			var compl = completor.next(text, pos)
+			msgInput.val(compl.text);
+			msgElement.selectionStart = msgElement.selectionEnd = compl.pos;
 		}
 	});
 	_.delay(function () {

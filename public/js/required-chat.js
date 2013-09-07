@@ -48,6 +48,7 @@ $(function () {
 	var logger = singletons.logger;
 	logger.ul = $('#message-history');
 	var chat = singletons.chat;
+	var completor = singletons.completor;
 
 	// set references
 	var chatPane = $('#chat');
@@ -160,12 +161,14 @@ $(function () {
 	socketapi.events.join = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.add(user);
+		completor.add(user.nick);
 		logger.log({from: user, text: 'joined.'});
 		logger.scrollToLatest();
 	};
 	socketapi.events.part = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.remove(user);
+		completor.remove(user.nick);
 		logger.log({from: user, text: 'quit.'});
 		logger.scrollToLatest();
 	};
@@ -238,6 +241,8 @@ $(function () {
 				var li = userlist.add(new User(user));
 				if (user.nick === chat.user.nick) {
 					li.addClass('highlight');
+				} else { // we don't want to add outselves to the autocomplete
+					completor.add(user.nick);
 				}
 			});
 		}
