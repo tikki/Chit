@@ -200,10 +200,8 @@ $(function () {
 			msgElement.selectionStart = msgElement.selectionEnd = compl.pos;
 		}
 	});
-	_.delay(function () {
-		logger.log('Type /help for a list of commands.');
-		logger.log('Type /nick <nickname> to set a nickname and connect.');
-	}, 100); /** @todo relying on a delay is bad. */
+	logger.log('Type /help for a list of commands.');
+	logger.log('Type /nick <nickname> to set a nickname and connect.');
 });
 
 });

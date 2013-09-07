@@ -22,6 +22,8 @@ function prettyTime(timestamp) {
  */
 function Logger(ul) {
 	this.ul = $(ul);
+	this._buffer = [];
+	this._bufferWatchTimer = null;
 	this._newMessageId();
 }
 
@@ -73,6 +75,36 @@ Logger.prototype.removeTags = function (msgId, tags) {
 };
 
 /**
+ * @returns {Boolean} true if the buffer was successfully emptied, otherwise false.
+ */
+Logger.prototype._dumpBuffer = function () {
+	var list = this.ul, buffer = this._buffer;
+	if (buffer.length) {
+		if (!list.length) {
+			return false;
+		} else {
+			_.each(buffer, function (newLine) {
+				list.append(newLine);
+			});
+			this._buffer = [];
+		}
+	}
+	return true;
+};
+
+/**
+ * Keeps a timer running, checking that the line buffer is emptied as soon as possible.
+ */
+Logger.prototype._watchBuffer = function () {
+	if (_.isNull(this._bufferWatchTimer) && !this._dumpBuffer()) {
+		this._bufferWatchTimer = setTimeout(_.bind(function () {
+			this._bufferWatchTimer = null;
+			this._watchBuffer();
+		}, this), 100);
+	}
+};
+
+/**
  * Add a new message to the log.
  * @param {Object|Messager.Message|String} message - Messager.Message compatible Object or text.
  * @returns {String} the new message's id.
@@ -93,7 +125,16 @@ Logger.prototype.log = function (message) {
 	var newLine = $("<li>", {
 		"class": "message",
 		id: "msg-" + msgId
-	}).appendTo(this.ul);
+	});
+	// Attach the new line to the DOM or buffer it if no ul is set.
+	if (!this.ul.length) {
+		this._buffer.push(newLine);
+		this._watchBuffer();
+	} else {
+		// Push out buffered lines first.
+		this._dumpBuffer();
+		this.ul.append(newLine);
+	}
 	// add line content
 	var params = [
 		["timestamp", prettyTime(message.timestamp || parseInt(Date.now() / 1000))],
