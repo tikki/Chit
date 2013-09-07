@@ -23,8 +23,8 @@ require.config({
 });
 
 require(
-	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/ui'], 
-	function ($, sjcl,  User,        socketapi,            singletons) {
+	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/ui'], 
+	function ($, sjcl,  User,        socketapi,            singletons,        notifications) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
@@ -72,32 +72,12 @@ $(function () {
 	loadFromHash();
 
 	// set up notifications
-	if ((window.webkitNotifications && webkitNotifications.checkPermission() === 1) // webkit; 0: allowed, 1: not allowed, 2: denied
-		|| (window.Notification && Notification.permission === 'default')) { // granted, default, denied
-		setFooterHeight(33);
-	}
-	try { // set Notification.permission for Webkit (it doesn't implement this yet)
-		Notification.permission = webkitNotifications.checkPermission() === 0 ? 'granted' : 'default';
-	} catch (err) {}
-	function notify(message) {
-		if (Notification.permission === 'granted') {
-			var n = new Notification('Chit', {
-				body: message,
-				tag: 'ChitNotification'
-			});
-			n.onshow = function () {
-				setTimeout(function () { n.close(); }, 3000); // need to wrap this for current Chrome to work.
-			}
-		}
+	if (notifications.permission() === notifications.unknown) {
+		setFooterHeight(33); // show footer; contains the question on wether to enable notifications.
 	}
 	$('#notification-yes').click(function () {
 		setFooterHeight(0);
-		Notification.requestPermission(function (status) {
-			// This allows to use Notification.permission with Chrome/Safari
-			if (Notification.permission !== status) {
-				Notification.permission = status;
-			}
-		});
+		notifications.requestPermission();
 	});
 	$('#notification-no').click(function () {
 		setFooterHeight(0);
@@ -200,7 +180,7 @@ $(function () {
 				if (text.length > 100) {
 					text = text.slice(0, 100) + '…';
 				}
-				notify('<' + message.from + '> ' + text);
+				notifications.notify('<' + message.from + '> ' + text);
 			}
 			logger.log(message);
 		}
