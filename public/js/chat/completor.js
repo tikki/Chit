@@ -1,7 +1,7 @@
 "use strict";
 define(
-	['underscore'],
-	function (_) {
+	['underscore', 'chat/ringbuffer'],
+	function (_, RingBuffer) {
 /**
  * @param {String} a - The string to search in.
  * @param {String} a - The string to look for.
@@ -28,18 +28,17 @@ function startsWith(a, b) {
  */
 function Completor() {
 	/** @private */
-	this._db = [];
-	this._compls = [];
-	this._complIndex = 0;
+	this._db     = [];
+	this._compls = null;
 	this._bounds = {start: 0, end: 0};
-	this._pos = null;
-	this._text = null;
+	this._pos    = null;
+	this._text   = null;
 	this._complText = null;
 }
 
 /** @private */
 Completor.prototype._init = function (text, pos) {
-	if (text === this._complText && pos === this._pos) {
+	if (!_.isNull(this._compls) && text === this._complText && pos === this._pos) {
 		return;
 	}
 	this._text = text;
@@ -50,10 +49,9 @@ Completor.prototype._init = function (text, pos) {
 	if (this._bounds.end === -1) this._bounds.end = text.length;
 	// Search the database for completions.
 	var word = text.slice(this._bounds.start, this._bounds.end);
-	this._compls = _.filter(this._db, function (completion) {
+	this._compls = new RingBuffer(_.filter(this._db, function (completion) {
 		return startsWith(completion, word);
-	});
-	this._complIndex = 0;
+	}));
 };
 
 /**
@@ -66,12 +64,10 @@ Completor.prototype._init = function (text, pos) {
  */
 Completor.prototype.next = function (text, pos) {
 	this._init(text, pos);
-	if (this._complIndex >= this._compls.length) {
-		this._complIndex = -1;
-	}
-	var newWord = this._compls[this._complIndex++];
+	var newWord = this._compls.next();
 	if (!newWord) {
 		this._complText = this._text;
+		this._pos = this._bounds.end;
 	} else {
 		this._complText = this._text.slice(0, this._bounds.start) + newWord;
 		this._pos = this._complText.length; // Set the new pos to the end of the completed word.
@@ -85,8 +81,7 @@ Completor.prototype.next = function (text, pos) {
  */
 Completor.prototype.add = function (word) {
 	this._db.push(word);
-	this._compls = [];
-	this._complIndex = 0;
+	this._compls = null;
 	return this;
 };
 
@@ -95,8 +90,7 @@ Completor.prototype.add = function (word) {
  */
 Completor.prototype.remove = function (word) {
 	this._db = _.without(this._db, word);
-	this._compls = [];
-	this._complIndex = 0;
+	this._compls = null;
 	return this;
 };
 
@@ -105,8 +99,7 @@ Completor.prototype.remove = function (word) {
  */
 Completor.prototype.removeAll = function () {
 	this._db = [];
-	this._compls = [];
-	this._complIndex = 0;
+	this._compls = null;
 	return this;
 };
 

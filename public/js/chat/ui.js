@@ -1,7 +1,7 @@
 "use strict";
 define(
-	['underscore', 'jquery', 'chat/singletons', 'chat/socket-client'],
-	function (_,    $,        singletons,        socketapi) {
+	['underscore', 'jquery', 'chat/singletons', 'chat/socket-client', 'chat/ringbuffer'],
+	function (_,    $,        singletons,        socketapi,            RingBuffer) {
 
 var commands = {
 	help: {
@@ -88,26 +88,11 @@ function parseInput(text) {
 	return false;
 }
 
-var sentMessageBuffer = {
-	init: function (size) {
-		this._buf = new Array(size);
-		this._ptr = 0;
-	},
-	add: function (msg) {
-		// store msg
-		this._buf[this._ptr] = msg;
-		// update pointer
-		this._ptr = (this._ptr + 1) % this._buf.length;
-	},
-	get: function (i) {
-		i = Math.min(this._buf.length - 1, i);
-		i = this._ptr - 1 - i;
-		i = (i + this._buf.length) % this._buf.length;
-		return this._buf[i];
-	},
-	index: 0
-};
-sentMessageBuffer.init(20);
+function popInputValue(inputElement) {
+	var val = inputElement.val();
+	inputElement.val('');
+	return val;
+}
 
 $(function () {
 	// references
@@ -115,6 +100,7 @@ $(function () {
 	var chat = singletons.chat;
 	var completor = singletons.completor;
 	var msgInput = $('#message-input');
+	var inputHistory = new RingBuffer(20, true);
 	// add commands to auto-completer
 	_.each(commands, function (value, key) {
 		completor.add('/' + key);
@@ -127,15 +113,13 @@ $(function () {
 	msgInput.keypress(function (event) {
 		if (event.keyCode == 13) { // 13 = return
 			// get message text
-			var text = msgInput.val().trim();
-			msgInput.val('');
+			var text = popInputValue(msgInput).trim();
 			// check text
 			if (!text.length) {
 				return;
 			}
 			// add current message to buffer & reset index
-			sentMessageBuffer.add(text);
-			sentMessageBuffer.index = 0;
+			inputHistory.add(text);
 			// check if text is a command
 			var parsed = parseInput(text);
 			logger.scrollToLatest();
@@ -174,21 +158,14 @@ $(function () {
 		if (event.keyCode === 38) { // 38: cursor-up
 			event.preventDefault();
 			// load next message from buffer into input
-			msgInput.val(sentMessageBuffer.get(sentMessageBuffer.index++));
+			msgInput.val(inputHistory.next());
 		} else if (event.keyCode === 40) { // 40: cursor-down
 			event.preventDefault();
-			if (sentMessageBuffer.index > 0) {
-				// reset index
-				sentMessageBuffer.index = 0;
-			} else {
-				// add current message to buffer (without sending)
-				var msg = msgInput.val();
-				if (msg.length) {
-					sentMessageBuffer.add(msg);
-				}
+			inputHistory.resetNext();
+			var msg = popInputValue(msgInput).trim();
+			if (msg.length) {
+				inputHistory.add(msg);
 			}
-			// clear message input
-			msgInput.val('');
 		} else if (event.keyCode === 9) { // 9: tab
 			event.preventDefault();
 			var msgElement = msgInput[0];
