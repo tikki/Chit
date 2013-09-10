@@ -23,8 +23,8 @@ require.config({
 });
 
 require(
-	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/ui', 'chat/ui-setup'],
-	function ($, sjcl,  User,        socketapi,            singletons,        notifications) {
+	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/cryptoParams', 'chat/ui', 'chat/ui-setup'],
+	function ($, sjcl,  User,        socketapi,            singletons,        notifications,        cryptoParams) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
@@ -188,6 +188,8 @@ $(function () {
 			// socketapi.disconnect();
 		} else {
 			logger.log('Joined chat#' + chat.id + '.');
+			// set adata
+			cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
 			// load history
 			logger.log('Loading chat history…');
 			chat.loadHistory(function (plainObjs, error) {
