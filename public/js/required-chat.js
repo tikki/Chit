@@ -130,6 +130,8 @@ $(function () {
 	// wire up socket-api
 	socketapi.events.connect = function (data) {
 		logger.log('Connected.')
+		// set adata
+		cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
 		logger.log('Joining chat…')
 		logger.scrollToLatest();
 		socketapi.join(
@@ -188,8 +190,6 @@ $(function () {
 			// socketapi.disconnect();
 		} else {
 			logger.log('Joined chat#' + chat.id + '.');
-			// set adata
-			cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
 			// load history
 			logger.log('Loading chat history…');
 			chat.loadHistory(function (plainObjs, error) {
