@@ -8,10 +8,8 @@ define(['sjcl', 'chat/crypto'], function (sjcl, Crypto) {
  * getters and setters used to manage User properties
  */
 function _getNick() {
-	if (_.isNull(this._nick)) {
-		try {
-			this._nick = this._crypto.decryptedStringFromObj(JSON.parse(this._nickCipher));
-		} catch (err) {}
+	if (_.isNull(this._nick) && !_.isNull(this._nickCipher)) {
+		this._nick = this._crypto.decryptedStringFromObj(JSON.parse(this._nickCipher));
 	}
 	return this._nick;
 }
@@ -22,10 +20,8 @@ function _setNick(newNick) {
 	}
 }
 function _getNickCipher() {
-	if (_.isNull(this._nickCipher)) {
-		try {
-			this._nickCipher = JSON.stringify(this._crypto.encryptedObjFromString(this._nick));
-		} catch (err) {}
+	if (_.isNull(this._nickCipher) && !_.isNull(this._nick)) {
+		this._nickCipher = JSON.stringify(this._crypto.encryptedObjFromString(this._nick));
 	}
 	return this._nickCipher;
 }
