@@ -1,0 +1,56 @@
+#args {
+	ol {
+		margin-top: 2em;
+		font-size: 1.3em;
+		li {
+			margin: .5em 0;
+		}
+	}
+
+	button {
+		.bigButton;
+
+		&.toggle {
+			width: 12em;
+			margin: 0 .6em 0 0;
+		}
+
+		&.active {
+			color: @highlight;
+		}
+	}
+}
+
+.bigButton {
+	font-size: 1.5 * @rem;
+	padding: 0.3em .5em;
+}
+
+
+#generate-password {
+	margin: 0 1em .6em 0;
+}
+
+#okay {
+	margin-top: 1em;
+}
+
+.password-strength-warning {
+	display: none;
+	color: red;
+	margin-left: 1em;
+}
+
+#chat-id, #chat-key, #password {
+	font-size: 2 * @rem;
+	height: 1.2em;
+	display: inline-block;
+	font-family: serif;
+	text-align: center;
+	color: black;
+	background-color: @background;
+	border-radius: 3px;
+	border: 1px solid black;
+	padding: 0 .5em;
+	min-width: 15em;
+}

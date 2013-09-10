@@ -23,7 +23,7 @@ require.config({
 });
 
 require(
-	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/ui'], 
+	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/ui', 'chat/ui-setup'],
 	function ($, sjcl,  User,        socketapi,            singletons,        notifications) {
 
 function asBase64(bitarray, forUrl) {
@@ -39,7 +39,6 @@ $(document).on('click', 'a.auto-link', function (event) {
 		window.open(url, '_blank'); // force to open in new tab
 	// }
 });
-
 
 $(function () {
 	// pull singletons into local namespace and connect to DOM elements
@@ -74,7 +73,7 @@ $(function () {
 
 	// set up notifications
 	if (notifications.permission() === notifications.unknown) {
-		setFooterHeight(33); // show footer; contains the question on wether to enable notifications.
+		setFooterHeight('2.5em'); // show footer; contains the question on wether to enable notifications.
 	}
 	$('#notification-yes').click(function () {
 		setFooterHeight(0);
@@ -118,20 +117,6 @@ $(function () {
 		argsPane.show();
 		chatPane.hide();
 	}
-
-	// set up chat parameters view
-	(function () {
-		var create  = $('#create-new-chat')
-
-		create.click(function () {
-			chat.chatKey = null; // force generation of a new key
-			chat.new(function (error) {
-				if (!error) {
-					location.hash = chat.id + '/' + asBase64(chat.chatKey, 1);
-				}
-			});
-		});
-	})();
 
 	// show main chat view
 	function showChat(id, chatKey) {

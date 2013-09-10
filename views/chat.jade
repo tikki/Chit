@@ -11,15 +11,25 @@ block footer
 
 block content
 	#args.full-page
-		//- p.
-		//- 	To join an existing chat, you need to know its <em>ID</em> and <em>key</em>.
-		//- input(type="text", placeholder="ID")#chat-id
-		//- input(type="text", placeholder="key")#chat-key
-		//- button#set-args join
-		p
-			| Or you can 
-			button#create-new-chat create a new chat
-			| .
+		p What would you like to do?
+		div#toggles
+			button(data-toggle="new-chat").toggle Create a new chat.
+			button(data-toggle="existing-chat").toggle Join an existing chat.
+		ol.existing-chat.new-chat
+			li.existing-chat
+				input(type="text", placeholder="Enter the chat ID.")#chat-id
+			li.existing-chat
+				input(type="text", placeholder="Enter the chat key or passphrase.")#chat-key
+			li.new-chat
+				div
+					button#generate-password Generate a good passphrase.
+					| or
+				input(type="text", placeholder="Enter a passphrase.")#password
+				span
+					span.password-strength-warning Please choose a better passphrase.
+			li.new-chat Remember it well! (Write it down, if you must.)
+			li
+				button#okay Okay!
 	#chat
 		#display
 			ul#message-history

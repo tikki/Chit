@@ -37,8 +37,13 @@ function _setChatKey(chatKey) {
 	// handle new chatKey
 	if (_.isNull(chatKey)) {
 		// generate a new chat key
-		this._chatKey = sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
+		if (sjcl.random.isReady()) {
+			this._chatKey = sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
+		}
 	} else if (_.isArray(chatKey)) {
+		if (cryptoParams.keySize !== sjcl.bitArray.bitLength(chatKey)) {
+			throw Error('Wrong chat key size.');
+		}
 		this._chatKey = chatKey;
 	} else {
 		this._chatKey = fromBase64(chatKey, 1);

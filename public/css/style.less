@@ -5,6 +5,9 @@ html, body, ul, li, p, a, input, h1, h2, div, span, header, footer {
 	border: none;
 	outline: none;
 }
+button {
+	margin: 0;
+}
 
 // define some colors
 @highlight: #DDB304;
@@ -13,8 +16,9 @@ html, body, ul, li, p, a, input, h1, h2, div, span, header, footer {
 @background: #eee;
 
 //
+@rem: 14px;
 body {
-	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+	font: @rem "Lucida Grande", Helvetica, Arial, sans-serif;
 	background-color: @background;
 }
 
@@ -92,3 +96,4 @@ footer {
 }
 
 @import "chat.less";
+@import "setup.less";
