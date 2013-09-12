@@ -93,5 +93,5 @@ Although each chat or even each message could in theory use & supply its own set
 
 All encryption is to be done using AES with a key length of 256 bits.
 Because of SJCL's (the crypto library used for the implementation of Chit's default web frontend) very limited amount of available cipher modes (at least by default) we'll run it in CCM (as specified in RFC3610).
-Adata shall be an empty string (NOTE: THIS SHOULD ACTUALLY BE SET TO SOMETHING MORE MEANINGFUL, BUT THE CURRENT IMPLEMENTATION HAS IT SET TO AN EMPTY STRING) and the tag-length set to 128, because chat messages are relatively short anyway.
-The encryption key is supplied directly, so no PKCS#5/PBKDF2 key derivation needs to happen and we can ignore the salt and amount of iterations.
+Adata (the authenticated data) shall be set to the chat-id and the tag-length set to 128, because chat messages are relatively short anyway.
+The encryption key can either be supplied directly or it can be derived from a passphrase using PKCS#5/PBKDF2 with SHA256-MAC. Each Chit installation supplies its own values for the salt and amount of iterations for the key derivation process.
