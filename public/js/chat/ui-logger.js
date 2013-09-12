@@ -152,19 +152,21 @@ Logger.prototype.log = function (message, dontScroll) {
 		}
 	});
 	lineParts = _.object(lineParts);
-	// enhance timestamp
-	var timediff = parseInt(message.timestamp - message.serverTimestamp) + 5;
-	if (timediff) {
+	// add desynchronization delta to timestamp
+	var timediff = parseInt(message.timestamp - message.serverTimestamp);
+	if (lineParts.timestamp && timediff) {
 		lineParts.timestamp.attr('title', 'desynchronized by ' + timediff + 's');
 		if (Math.abs(timediff) > 3) {
 			lineParts.timestamp.addClass('warning');
 		}
 	}
 	// create text links
-	lineParts.text.html(url.replaceUrlsWithHtmlLinks(lineParts.text.html()));
+	if (lineParts.text) {
+		lineParts.text.html(url.replaceUrlsWithHtmlLinks(lineParts.text.html()));
+	}
 	// add nick color
 	message.color = message.color || User.calculateColor(message.from, message.signature);
-	if (message.color) {
+	if (message.color && lineParts.from) {
 		lineParts.from.css('color', message.color);
 	}
 	// add tags
