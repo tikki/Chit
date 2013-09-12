@@ -33,6 +33,7 @@ function _getChatKey() {
  * @param {sjcl.bitArray|String|null} chatKey - A bitArray or BASE64 encoded String, or `null` to generate a new random key.
  */
 function _setChatKey(chatKey) {
+	this._chatKey = null; // reset chatKey
 	this._serverKey = null; // reset serverKey
 	// handle new chatKey
 	if (_.isNull(chatKey)) {
@@ -46,7 +47,13 @@ function _setChatKey(chatKey) {
 		}
 		this._chatKey = chatKey;
 	} else {
-		this._chatKey = fromBase64(chatKey, 1);
+		// try standard base64 encoding
+		try {
+			this._chatKey = fromBase64(chatKey, 0);
+		} catch (err) {
+			// try url-friendly base64 encoding
+			this._chatKey = fromBase64(chatKey, 1);
+		}
 	}
 	// update messager & user
 	this.messager = new Messager(this._chatKey);
