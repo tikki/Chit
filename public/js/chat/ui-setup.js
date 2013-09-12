@@ -37,7 +37,7 @@ $(function () {
 	// Hide all toggle elements by default.
 	toggleElements.hide();
 	// Wire up the password generator.
-	var minPasswordLength = 20;
+	var minPasswordLength = 22;
 	var generatePasswd = $('#generate-password');
 	var passwordInput = $('#password');
 	generatePasswd.click(function () {
@@ -45,9 +45,8 @@ $(function () {
 	});
 	// Check password strength.
 	function checkPassword() {
-		/** @todo make this a proper check, looking at the key space & everything, not just length */
-		var text = passwordInput.val().trim();
-		if (text.length && text.length < minPasswordLength) {
+		var passwd = passwordInput.val().trim();
+		if (passwd.length && password.score(passwd) < 60) {
 			$('.password-strength-warning').show();
 		} else {
 			$('.password-strength-warning').hide();
