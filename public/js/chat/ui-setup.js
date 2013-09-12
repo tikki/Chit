@@ -12,14 +12,7 @@ function startsWith(a, b) {
 }
 
 function chatKeyFromPassword(password) {
-	// password = sjcl.codec.utf8String.toBits(password);
-	var hash = sjcl.hash.sha256;
-	var key = new sjcl.misc.hmac(cryptoParams.password.key, hash).encrypt(password);
-	var actualKeySize = sjcl.bitArray.bitLength(key);
-	if (cryptoParams.keySize !== actualKeySize) {
-		throw new Error('Hash produces wrong key size for chat key.');
-	}
-	return key;
+	return sjcl.misc.pbkdf2(password, cryptoParams.pbkdf2.salt, cryptoParams.pbkdf2.iterations, cryptoParams.keySize, sjcl.misc.hmac); // hmac defaults to sha256-mac
 }
 
 $(function () {

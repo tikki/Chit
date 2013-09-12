@@ -5,7 +5,8 @@ define({
 	mode: "ccm",
 	tagSize: 128,
 	adata: "",
-	password: {
-		key: PUT_A_LONG_UNIQUE_RANDOM_STRING_HERE
+	pbkdf2: {
+		salt: PUT_A_LONG_UNIQUE_RANDOM_STRING_HERE,
+		iterations: PUT_A_LARGE_NUMBER_HERE__AT_LEAST_10000
 	}
 });
