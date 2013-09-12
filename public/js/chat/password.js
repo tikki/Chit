@@ -83,10 +83,48 @@ function _randInt(min, max) {
 }
 // buckets={};for(i=0;i<100000;i++){var r=_randInt(0,5);buckets[r]=(buckets[r]||0)+1};buckets
 
+/**
+ * Counts how many times a Regular Expression matches a given string.
+ */
+function _count(regex, s) {
+	if (!regex.global) return;
+	for (var c = 0; regex.exec(s) !== null; c++);
+	return c;
+}
+
+/**
+ * @returns {Number} a score between 0 and 100, 0 being the worst.
+ */
+function score(password) {
+	/**
+	 * @todo invest more time into a properly balanced scoring system, with
+	 * requirements and positive and negative cases.
+	 * Positives:
+	 * - length
+	 * - diversity (chars from more than one group)
+	 * Negatives:
+	 * - any kind of patterns
+	 *   - repeated chars
+	 *   - 12345
+	 *   - qwert[yz]
+	 *   etc.
+	 */
+	var score = 0;
+	score += password.length * (100 / 50); // we consider 50 chars to be 100% safe no matter what :/
+	// add 8% bonus for every group used, adding up to 40%
+	if (_count(/[a-z]/g, password)) score += 8;
+	if (_count(/[A-Z]/g, password)) score += 8;
+	if (_count(/[0-9]/g, password)) score += 8;
+	if (_count(/[^\w\s]/g, password)) score += 8;
+	if (_count(/\s/g, password)) score += 8;
+	return Math.min(parseInt(score), 100);
+}
+
 return {
 	english: english,
 	german: german,
-	generate: generate
+	generate: generate,
+	score: score
 };
 
 });
