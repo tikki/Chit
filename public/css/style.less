@@ -15,8 +15,10 @@ button {
 @link: #0070FF;
 @background: #eee;
 
-//
+// some lengths & sizes
 @rem: 14px;
+
+//
 body {
 	font: @rem "Lucida Grande", Helvetica, Arial, sans-serif;
 	background-color: @background;
@@ -25,7 +27,7 @@ body {
 header {
 	background-color: @highlight;
 	h1 {
-		padding-top: 15px;
+		padding-top: @rem;
 		font-size: 2.5em;
 	}
 }
@@ -36,7 +38,7 @@ footer {
 }
 
 header, #content, footer {
-	padding: 0 35px;
+	padding: 0 (2.5 * @rem);
 }
 
 a {
@@ -65,7 +67,7 @@ input {
 .scroll-x { overflow-x: auto; }
 .scroll-y { overflow-y: auto; }
 
-@header-height: 55px;
+@header-height: 4 * @rem;
 @footer-height: 0;
 
 header {
@@ -92,7 +94,7 @@ footer {
 	.row;
 	.col;
 	.scroll-y;
-	padding: 25px;
+	padding: 2 * @rem;
 }
 
 @import "chat.less";

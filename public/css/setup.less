@@ -1,4 +1,14 @@
-#args {
+.bordered {
+	font-family: serif;
+	text-align: center;
+	background-color: lighten(@background, 5%);
+	border: 1px solid black;
+	border-radius: 3px;
+	padding: 0 .5em;
+}
+
+#setup {
+	display: none;
 	ol {
 		margin-top: 2em;
 		font-size: 1.3em;
@@ -19,6 +29,14 @@
 			color: @highlight;
 		}
 	}
+
+	#new-chat-created {
+		display: none;
+		em {
+			.bordered;
+			font-size: 1.2em;
+		}
+	}
 }
 
 .bigButton {
@@ -31,7 +49,7 @@
 	margin: 0 1em .6em 0;
 }
 
-#okay {
+#okay, #join-chat {
 	margin-top: 1em;
 }
 
@@ -42,15 +60,9 @@
 }
 
 #chat-id, #chat-key, #password {
+	.bordered;
 	font-size: 2 * @rem;
-	height: 1.2em;
 	display: inline-block;
-	font-family: serif;
-	text-align: center;
-	color: black;
-	background-color: @background;
-	border-radius: 3px;
-	border: 1px solid black;
-	padding: 0 .5em;
+	height: 1.2em;
 	min-width: 15em;
 }

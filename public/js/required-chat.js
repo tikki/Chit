@@ -50,26 +50,8 @@ $(function () {
 	var completor = singletons.completor;
 
 	// set references
-	var chatPane = $('#chat');
-	var argsPane = $('#args');
 	var footer   = $('footer');
 	var content  = $('#content');
-
-	// watch location hash
-	function loadFromHash() {
-		var args = /^#?(\d+)\/(.*)/.exec(location.hash);
-		if (!_.isNull(args)) {
-			args = {id: args[1], key: args[2]};
-			showChat(args.id, args.key);
-		} else {
-			showArgs();
-		}
-	}
-
-	$(window).on('hashchange', function() {
-		loadFromHash();
-	});
-	loadFromHash();
 
 	// set up notifications
 	if (notifications.permission() === notifications.unknown) {
@@ -91,7 +73,7 @@ $(function () {
 		});
 	}
 
-	// show gradient-overlay when we're not scrolled all the way to the bottom
+	// Show gradient overlays when appropriate.
 	var msgHistory = $('#message-history');
 	var gradientTop = $('#gradient-overlay-top');
 	var gradientBottom = $('#gradient-overlay-bottom');
@@ -111,21 +93,6 @@ $(function () {
 			gradientBottom.hide();
 		}
 	});
-
-	// show chat parameters view
-	function showArgs() {
-		argsPane.show();
-		chatPane.hide();
-	}
-
-	// show main chat view
-	function showChat(id, chatKey) {
-		argsPane.hide();
-		chatPane.show();
-
-		chat.id = id;
-		chat.chatKey = chatKey;
-	}
 
 	// wire up socket-api
 	socketapi.events.connect = function (data) {
