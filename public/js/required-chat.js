@@ -124,19 +124,16 @@ $(function () {
 	};
 	socketapi.events.message = function (data) {
 		var message = chat.messager.plainObjFromCipherMessage(data.msg);
-		if (!message.isGenuine()) {
-			logger.error('Discarded a desynchronized message.');
-		} else {
-			var text = message.text;
-			if (new RegExp('\\b' + chat.user.nick + '\\b', 'i').test(text)) {
-				message.tags = 'highlight';
-				if (text.length > 100) {
-					text = text.slice(0, 100) + '…';
-				}
-				notifications.notify('<' + message.from + '> ' + text);
+		var text = message.text;
+		if (new RegExp('\\b' + chat.user.nick + '\\b', 'i').test(text)) {
+			message.tags = 'highlight';
+			// Cut the text for the notification.
+			if (text.length > 100) {
+				text = text.slice(0, 100) + '…';
 			}
-			logger.log(message);
+			notifications.notify('<' + message.from + '> ' + text);
 		}
+		logger.log(message);
 	};
 	socketapi.events.message_reply = function (data) {
 		if (data.error) {

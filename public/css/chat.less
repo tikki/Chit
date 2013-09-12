@@ -4,6 +4,7 @@
 
 // general page layout
 
+@error: #b00;
 @userlist-width: 100px;
 @control-height: 1.6em;
 
@@ -78,6 +79,9 @@ footer {
 	.timestamp {
 		margin-right: 5px;
 		color: grey;
+		&.warning {
+			color: @error;
+		}
 	}
 	.from {
 		margin-right: 5px;
@@ -98,7 +102,7 @@ footer {
 	color: grey;
 }
 .error {
-	color: red;
+	color: @error;
 }
 
 // controls
