@@ -96,11 +96,10 @@ $(function () {
 
 	// wire up socket-api
 	socketapi.events.connect = function (data) {
-		logger.log('Connected.')
+		logger.log('Connected.');
 		// set adata
 		cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
-		logger.log('Joining chat…')
-		logger.scrollToLatest();
+		logger.log('Joining chat…');
 		socketapi.join(
 			chat.id,
 			asBase64(chat.serverKey),
@@ -110,21 +109,18 @@ $(function () {
 	};
 	socketapi.events.disconnect = function (data) {
 		logger.log('Disconnected.');
-		logger.scrollToLatest();
 	}
 	socketapi.events.join = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.add(user);
 		completor.add(user.nick);
 		logger.log({from: user, text: 'joined.'});
-		logger.scrollToLatest();
 	};
 	socketapi.events.part = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.remove(user);
 		completor.remove(user.nick);
 		logger.log({from: user, text: 'quit.'});
-		logger.scrollToLatest();
 	};
 	socketapi.events.message = function (data) {
 		var message = chat.messager.plainObjFromCipherMessage(data.msg);
@@ -141,7 +137,6 @@ $(function () {
 			}
 			logger.log(message);
 		}
-		logger.scrollToLatest();
 	};
 	socketapi.events.message_reply = function (data) {
 		if (data.error) {
@@ -163,23 +158,21 @@ $(function () {
 				if (error) {
 					logger.error('Could not load chat history. (' + error + ')');
 				} else {
-					logger.log('--- History start ---');
+					logger.log('--- History start ---', true);
 					var regex = new RegExp('\\b' + chat.user.nick + '\\b', 'i');
 					_.each(plainObjs, function (msgObj) {
 						if (regex.test(msgObj.text)) {
 							msgObj.tags = 'highlight';
 						}
-						logger.log(msgObj);
+						logger.log(msgObj, true);
 					});
 					logger.log('--- History end ---');
 				}
-				logger.scrollToLatest();
 			});
 			// load list of other connected users
 			logger.log('Requesting names…');
 			socketapi.names(chat.id);
 		}
-		logger.scrollToLatest();
 	};
 	socketapi.events.names_reply = function (data) {
 		if (data.error) {

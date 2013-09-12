@@ -106,10 +106,12 @@ Logger.prototype._watchBuffer = function () {
 
 /**
  * Add a new message to the log.
+ * Automatically scrolls to the latest message unless told not to do so.
  * @param {Object|Messager.Message|String} message - Messager.Message compatible Object or text.
+ * @param {Boolean} [dontScroll] - Set to true if you're logging a huge amount of messages at once.
  * @returns {String} the new message's id.
  */
-Logger.prototype.log = function (message) {
+Logger.prototype.log = function (message, dontScroll) {
 	if (_.isString(message)) {
 		message = {text: message};
 	}
@@ -159,6 +161,10 @@ Logger.prototype.log = function (message) {
 	}
 	// add tags
 	this.addTags(msgId, message.tags);
+	//
+	if (!dontScroll) {
+		this.scrollToLatest();
+	}
 	// done.
 	return msgId;
 };
@@ -184,7 +190,9 @@ Logger.prototype.error = function (error) {
  * Scrolls the Logger's ul so the latest log message is visible.
  */
 Logger.prototype.scrollToLatest = function () {
-	this.ul.scrollTop(this.ul[0].scrollHeight);
+	if (this.ul.length) {
+		this.ul.scrollTop(this.ul[0].scrollHeight);
+	}
 };
 
 return Logger;

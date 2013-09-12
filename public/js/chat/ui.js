@@ -122,7 +122,6 @@ $(function () {
 			inputHistory.add(text);
 			// check if text is a command
 			var parsed = parseInput(text);
-			logger.scrollToLatest();
 			if (parsed === false) {
 				// enforce socket connection
 				if (!socketapi.isConnected()) {
@@ -138,7 +137,6 @@ $(function () {
 				}
 				// log message
 				var msgId = logger.log(message);
-				logger.scrollToLatest();
 				// send message
 				chat.post(message, function (error) {
 					if (error === 'HACK--sent-via-socket') {
