@@ -91,8 +91,15 @@ Chat.prototype.checkKey = function (callback) {
 	}
 };
 
+/**
+ * A dummy function used when no callback is supplied.
+ * Keeps us from having to check every time wether callback is a function.
+ */
+function _noop() {}
+
 Chat.prototype.new = function (callback) {
 	var self = this;
+	if (!_.isFunction(callback)) callback = _noop;
 	crypto.randomBytes(config.secretLength, function (err, randomBuffer) { // when encoding Base64, use a len %3
 		if (err) return callback(err);
 		db.incr('chatCounter', function (err, chatCounter) {
@@ -112,15 +119,14 @@ Chat.prototype.new = function (callback) {
 			db.set(dbKey + 'modified', self.modified);
 			db.set(dbKey + 'touched', self.touched);
 			// call back
-			if (_.isFunction(callback)) {
-				callback(self);
-			}
+			callback(self);
 		});
 	});
 };
 
 Chat.prototype.loadMessages = function (callback) {
 	var self = this;
+	if (!_.isFunction(callback)) callback = _noop;
 	self.checkKey(function (success, err) {
 		if (!success) {
 			return callback(err);
@@ -133,15 +139,14 @@ Chat.prototype.loadMessages = function (callback) {
 			self.touched = now();
 			db.set(dbKey + 'touched', self.touched);
 			// call back
-			if (_.isFunction(callback)) {
-				callback(self);
-			}
+			callback(self);
 		});
 	});
 };
 
 Chat.prototype.addMessage = function (msg, callback) {
 	var self = this;
+	if (!_.isFunction(callback)) callback = _noop;
 	// check message length
 	if (msg.length > config.message.length) {
 		return callback('message too long.');
@@ -163,15 +168,14 @@ Chat.prototype.addMessage = function (msg, callback) {
 			db.set(dbKey + 'modified', self.modified);
 			db.set(dbKey + 'touched', self.touched);
 			// call back
-			if (_.isFunction(callback)) {
-				callback(self);
-			}
+			callback(self);
 		});
 	});
 };
 
 Chat.prototype.delete = function (callback) {
 	var self = this;
+	if (!_.isFunction(callback)) callback = _noop;
 	if (!_.isString(self.id)) {
 		return callback('invalid id.');
 	}
@@ -188,8 +192,6 @@ Chat.prototype.delete = function (callback) {
 		db.del(dbKey + 'modified');
 		db.del(dbKey + 'touched');
 		// call back
-		if (_.isFunction(callback)) {
-			callback(self);
-		}
+		callback(self);
 	});
 };
