@@ -142,6 +142,10 @@ Chat.prototype.loadMessages = function (callback) {
 
 Chat.prototype.addMessage = function (msg, callback) {
 	var self = this;
+	// check message length
+	if (msg.length > config.message.length) {
+		return callback('message too long.');
+	}
 	self.checkKey(function (success, err) {
 		if (!success) {
 			return callback(err);
@@ -149,6 +153,10 @@ Chat.prototype.addMessage = function (msg, callback) {
 		var dbKey = util.format('chat:%s:', self.id);
 		db.rpush(dbKey + 'messages', msg, function (err, count) {
 			if (err) return callback(err);
+			// remove surplus messages from db & local buffer
+			db.ltrim(dbKey + 'messages', -config.message.count, -1); // ltrim is [start, end]
+			self.messages = self.messages.slice(-config.message.count + 1); // slice is [start, end); we want to slice away one more than allowed so we have space to push the new message
+			// add message to local buffer
 			self.messages.push(msg);
 			// update timestamps
 			self.modified = self.touched = now();
