@@ -172,8 +172,8 @@ Chat.prototype.addMessage = function (msg, callback) {
 
 Chat.prototype.delete = function (callback) {
 	var self = this;
-	if (_.isString(self.id)) {
-		throw 'id not set.';
+	if (!_.isString(self.id)) {
+		return callback('invalid id.');
 	}
 	var dbKey = util.format('chat:%s:', self.id);
 	db.get(dbKey + 'secret', function (err, secret) {
