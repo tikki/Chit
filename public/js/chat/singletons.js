@@ -6,6 +6,6 @@ return {
 	userlist: new Userlist(),
 	logger: new Logger(),
 	chat: new Chat(),
-	completor: new Completor()
+	completor: new Completor({caseInsensitive: true})
 };
 });
