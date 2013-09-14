@@ -14,6 +14,10 @@ function startsWith(a, b) {
 /**
  * Completor completes a word inside a string using a database.
  * 
+ * @param {Object|Completor} [params]
+ * @param {Boolean} [params.caseInsensitive=false] - Compare words case insensitive.
+ * @param {Number} [params.minWordLength=1] - The minimum length a word needs to be for the Completor to start making suggestions.
+ * 
  * @example
  * var completor = new Completor(),
  *     input     = $('input[type=text]');
@@ -26,7 +30,9 @@ function startsWith(a, b) {
  * 
  * @constructor
  */
-function Completor() {
+function Completor(params) {
+	this.caseInsensitive = params.caseInsensitive || false;
+	this.minWordLength   = params.minWordLength || 1;
 	/** @private */
 	this._db     = [];
 	this._compls = null;
@@ -49,9 +55,16 @@ Completor.prototype._init = function (text, pos) {
 	if (this._bounds.end === -1) this._bounds.end = text.length;
 	// Search the database for completions.
 	var word = text.slice(this._bounds.start, this._bounds.end);
-	this._compls = new RingBuffer(_.filter(this._db, function (completion) {
-		return startsWith(completion, word);
-	}));
+	if (word.length < this.minWordLength) {
+		this._compls = new RingBuffer([]);
+	} else {
+		if (this.caseInsensitive) word = word.toLowerCase();
+		var self = this;
+		this._compls = new RingBuffer(_.filter(self._db, function (completion) {
+			if (self.caseInsensitive) completion = completion.toLowerCase();
+			return startsWith(completion, word);
+		}));
+	}
 };
 
 /**
@@ -81,6 +94,7 @@ Completor.prototype.next = function (text, pos) {
  */
 Completor.prototype.add = function (word) {
 	this._db.push(word);
+	this._db.sort().reverse(); // .reverse() b/c the RingBuffer cycles backwards through the buffer.
 	this._compls = null;
 	return this;
 };
