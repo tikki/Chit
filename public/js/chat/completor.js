@@ -64,7 +64,7 @@ Completor.prototype._init = function (text, pos) {
  */
 Completor.prototype.next = function (text, pos) {
 	this._init(text, pos);
-	var newWord = this._compls.next();
+	var newWord = this._compls.prev();
 	if (!newWord) {
 		this._complText = this._text;
 		this._pos = this._bounds.end;

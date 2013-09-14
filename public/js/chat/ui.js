@@ -156,10 +156,10 @@ $(function () {
 		if (event.keyCode === 38) { // 38: cursor-up
 			event.preventDefault();
 			// load next message from buffer into input
-			msgInput.val(inputHistory.next());
+			msgInput.val(inputHistory.prev());
 		} else if (event.keyCode === 40) { // 40: cursor-down
 			event.preventDefault();
-			inputHistory.resetNext();
+			inputHistory.resetPrev();
 			var msg = popInputValue(msgInput).trim();
 			if (msg.length) {
 				inputHistory.add(msg);

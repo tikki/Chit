@@ -25,7 +25,7 @@ function RingBuffer(size, unique) {
 	}
 	this._unique = unique || false;
 	this._ptr  = -1; // Index of the last used slot in _buf.
-	this._next = 0; // Counter used by RingBuffer.next().
+	this._prev = 0; // Counter used by RingBuffer.prev().
 }
 
 /**
@@ -48,7 +48,7 @@ RingBuffer.prototype.add = function(something) {
 		this._ptr  = (this._ptr + 1) % this._buf.length;
 		this._size = Math.min(this._buf.length, this._size + 1);
 	}
-	this._next = 0; // reset next-cycle
+	this._prev = 0; // reset prev-cycle
 	this._buf[this._ptr] = something;
 	return this;
 };
@@ -66,22 +66,22 @@ RingBuffer.prototype.get = function(index) {
 
 /**
  * Cycles through the buffered elements when called repeatedly.
- * @returns the next element, or undefined once a full cycle is finished.
+ * @returns the prev element, or undefined once a full cycle is finished.
  */
-RingBuffer.prototype.next = function() {
-	var index = this._next++;
+RingBuffer.prototype.prev = function() {
+	var index = this._prev++;
 	if (index >= this._size) {
-		this._next = 0;
+		this._prev = 0;
 		return;
 	}
 	return this.get(index);
 };
 
 /**
- * Resets the internal next-index.
+ * Resets the internal prev-index.
  */
-RingBuffer.prototype.resetNext = function() {
-	this._next = 0;
+RingBuffer.prototype.resetPrev = function() {
+	this._prev = 0;
 	return this;
 };
 
