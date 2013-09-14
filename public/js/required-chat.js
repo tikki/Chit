@@ -143,7 +143,6 @@ $(function () {
 	socketapi.events.part = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.remove(user);
-		completor.remove(user.nick);
 		logger.log({from: user, text: 'quit.', tags: 'info'});
 	};
 	socketapi.events.message = function (data) {
@@ -172,6 +171,10 @@ $(function () {
 				} else {
 					logger.info('--- History start ---');
 					_.each(plainObjs, function (message) {
+						// Add the names of all former users to the completor.
+						if (message.from !== chat.user.nick) {
+							completor.add(message.from);
+						}
 						logger.log(prepareLogMessage(message), true);
 					});
 					logger.info('--- History end ---');
