@@ -93,9 +93,16 @@ Completor.prototype.next = function (text, pos) {
  * Adds a word to the database of completion words.
  */
 Completor.prototype.add = function (word) {
-	this._db.push(word);
-	this._db.sort().reverse(); // .reverse() b/c the RingBuffer cycles backwards through the buffer.
-	this._compls = null;
+	if (word) {
+		// check for duplicate entries (case sensitive, b/c technically "User1" is different from "user1")
+		if (!_.contains(this._db, word)) {
+			// add word to internal db
+			this._db.push(word);
+			this._db.sort().reverse(); // .reverse() b/c the RingBuffer cycles backwards through the buffer.
+			this._compls = null;
+		}
+	}
+	// return this for chaining
 	return this;
 };
 
