@@ -60,7 +60,7 @@ Completor.prototype._init = function (text, pos) {
 	} else {
 		if (this.caseInsensitive) word = word.toLowerCase();
 		var self = this;
-		this._compls = new RingBuffer(_.filter(self._db, function (completion) {
+		this._compls = new RingBuffer(_.filter(this._db, function (completion) {
 			if (self.caseInsensitive) completion = completion.toLowerCase();
 			return startsWith(completion, word);
 		}));
