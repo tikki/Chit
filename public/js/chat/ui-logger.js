@@ -17,6 +17,17 @@ function prettyTime(timestamp) {
 }
 
 /**
+ * @returns a String in format YYYY-MM-DD (local time) from a a UTC timestamp (seconds since 1970)
+ */
+function prettyDate(timestamp) {
+	var date = new Date(timestamp * 1000);
+	date = [date.getFullYear(), date.getMonth(), date.getDate()];
+	return _.map(date, function (e) {
+		return e < 10 ? '0' + e : e;
+	}).join('-');
+}
+
+/**
  * @constructor
  * @param {HTML-Entity} ul - The ul where to log to.
  */
@@ -25,6 +36,8 @@ function Logger(ul) {
 	this._buffer = [];
 	this._bufferWatchTimer = null;
 	this._newMessageId();
+	this._latestTimestamp = 0;
+	this._dateString = '';
 }
 
 /**
@@ -124,10 +137,22 @@ Logger.prototype.log = function (message, dontScroll) {
 	}
 	// create new line
 	var msgId = message.msgId || this._newMessageId();
-	var newLine = $("<li>", {
-		"class": "message",
-		id: "msg-" + msgId
+	var newLine = $('<li>', {
+		'class': 'message',
+		id: 'msg-' + msgId
 	});
+	// check timestamp for date change
+	if (this._latestTimestamp < message.timestamp) {
+		this._latestTimestamp = message.timestamp;
+		var newDateString = prettyDate(this._latestTimestamp);
+		if (this._dateString !== newDateString) {
+			this._dateString = newDateString;
+			this.log({
+				text: '--- ' + this._dateString + ' ---',
+				tags: 'info'
+			}, true);
+		}
+	}
 	// Attach the new line to the DOM or buffer it if no ul is set.
 	if (!this.ul.length) {
 		this._buffer.push(newLine);
@@ -139,16 +164,17 @@ Logger.prototype.log = function (message, dontScroll) {
 	}
 	// add line content
 	var lineParts = [
-		["timestamp", prettyTime(message.timestamp || parseInt(Date.now() / 1000))],
-		["from", message.from],
-		["text", message.text]
+		['timestamp', prettyTime(message.timestamp || parseInt(Date.now() / 1000))],
+		['from', message.from],
+		['text', message.text]
 	];
 	_.each(lineParts, function (e, i) {
 		var name = e[0], value = e[1];
 		if (value) {
-			lineParts[i][1] = $("<span>", {"class": name})
+			lineParts[i][1] = $('<span>', {'class': name})
 				.text(value)
 				.appendTo(newLine);
+			newLine.append(' ');
 		}
 	});
 	lineParts = _.object(lineParts);
@@ -171,7 +197,7 @@ Logger.prototype.log = function (message, dontScroll) {
 	}
 	// add tags
 	this.addTags(msgId, message.tags);
-	//
+	// scroll new line into view
 	if (!dontScroll) {
 		this.scrollToLatest();
 	}
@@ -194,6 +220,15 @@ Logger.prototype.msgElement = function(msgId) {
  */
 Logger.prototype.error = function (error) {
 	return this.log({text: error, tags: 'error'});
+};
+
+/**
+ * Shorthand to log an info message.
+ * @param {String} info - An info message to be logged.
+ * @returns {String} the new message's id.
+ */
+Logger.prototype.info = function (info) {
+	return this.log({text: info, tags: 'info'});
 };
 
 /**

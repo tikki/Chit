@@ -23,8 +23,8 @@ require.config({
 });
 
 require(
-	['jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/cryptoParams', 'chat/ui', 'chat/ui-setup'],
-	function ($, sjcl,  User,        socketapi,            singletons,        notifications,        cryptoParams) {
+	['underscore', 'jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/cryptoParams', 'chat/ui', 'chat/ui-setup'],
+	function (_,    $,        sjcl,   User,        socketapi,            singletons,        notifications,        cryptoParams) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
@@ -39,6 +39,28 @@ $(document).on('click', 'a.auto-link', function (event) {
 		window.open(url, '_blank'); // force to open in new tab
 	// }
 });
+
+var _logMessageHighlightRegex = null; //new RegExp('\\b' + chat.user.nick + '\\b', 'i');
+function prepareLogMessage(message, notifyOnHighlight) {
+	// check for highlight
+	var text = message.text;
+	if (_logMessageHighlightRegex && _logMessageHighlightRegex.test(text)) {
+		message.tags = 'highlight';
+		if (notifyOnHighlight) {
+			// Cut the text for the notification.
+			if (text.length > 100) {
+				text = text.slice(0, 100) + '…';
+			}
+			notifications.notify('<' + message.from + '> ' + text);
+		}
+	}
+	// If we want to alter the name we need to calculate the message color beforehand.
+	if (_.isString(message.from)) {
+		message.color = new User({nick: message.from, signature: message.signature}).color;
+		message.from = '<' + message.from + '>';
+	}
+	return message;
+}
 
 $(function () {
 	// pull singletons into local namespace and connect to DOM elements
@@ -96,10 +118,12 @@ $(function () {
 
 	// wire up socket-api
 	socketapi.events.connect = function (data) {
-		logger.log('Connected.');
+		logger.info('Connected.');
 		// set adata
 		cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
-		logger.log('Joining chat…');
+		// set highlight regex
+		_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
+		logger.info('Joining chat…');
 		socketapi.join(
 			chat.id,
 			asBase64(chat.serverKey),
@@ -108,32 +132,23 @@ $(function () {
 		);
 	};
 	socketapi.events.disconnect = function (data) {
-		logger.log('Disconnected.');
+		logger.info('Disconnected.');
 	}
 	socketapi.events.join = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.add(user);
 		completor.add(user.nick);
-		logger.log({from: user, text: 'joined.'});
+		logger.log({from: user, text: 'joined.', tags: 'info'});
 	};
 	socketapi.events.part = function (data) {
 		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
 		userlist.remove(user);
 		completor.remove(user.nick);
-		logger.log({from: user, text: 'quit.'});
+		logger.log({from: user, text: 'quit.', tags: 'info'});
 	};
 	socketapi.events.message = function (data) {
 		var message = chat.messager.plainObjFromCipherMessage(data.msg);
-		var text = message.text;
-		if (new RegExp('\\b' + chat.user.nick + '\\b', 'i').test(text)) {
-			message.tags = 'highlight';
-			// Cut the text for the notification.
-			if (text.length > 100) {
-				text = text.slice(0, 100) + '…';
-			}
-			notifications.notify('<' + message.from + '> ' + text);
-		}
-		logger.log(message);
+		logger.log(prepareLogMessage(message, true));
 	};
 	socketapi.events.message_reply = function (data) {
 		if (data.error) {
@@ -148,26 +163,22 @@ $(function () {
 			logger.error('Error joining: ' + data.error);
 			// socketapi.disconnect();
 		} else {
-			logger.log('Joined chat#' + chat.id + '.');
+			logger.info('Joined chat#' + chat.id + '.');
 			// load history
-			logger.log('Loading chat history…');
+			logger.info('Loading chat history…');
 			chat.loadHistory(function (plainObjs, error) {
 				if (error) {
 					logger.error('Could not load chat history. (' + error + ')');
 				} else {
-					logger.log('--- History start ---', true);
-					var regex = new RegExp('\\b' + chat.user.nick + '\\b', 'i');
-					_.each(plainObjs, function (msgObj) {
-						if (regex.test(msgObj.text)) {
-							msgObj.tags = 'highlight';
-						}
-						logger.log(msgObj, true);
+					logger.info('--- History start ---');
+					_.each(plainObjs, function (message) {
+						logger.log(prepareLogMessage(message), true);
 					});
-					logger.log('--- History end ---');
+					logger.info('--- History end ---');
 				}
 			});
 			// load list of other connected users
-			logger.log('Requesting names…');
+			logger.info('Requesting names…');
 			socketapi.names(chat.id);
 		}
 	};
@@ -175,7 +186,7 @@ $(function () {
 		if (data.error) {
 			logger.error('Could not get names: ' + data.error);
 		} else {
-			logger.log('Got the list of connected names.');
+			logger.info('Got the list of connected names.');
 			var user = new User({secretKey: chat.chatKey});
 			userlist.removeAll();
 			_.each(data.infos, function (info) {
