@@ -31,6 +31,7 @@ function startsWith(a, b) {
  * @constructor
  */
 function Completor(params) {
+	params = params || {};
 	this.caseInsensitive = params.caseInsensitive || false;
 	this.minWordLength   = params.minWordLength || 1;
 	/** @private */
