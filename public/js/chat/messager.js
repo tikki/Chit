@@ -9,7 +9,8 @@ define(["underscore", "chat/crypto"], function (_, Crypto) {
  * Messager handles creation and parsing of spec-compliant message strings,
  * to be sent to and from the chat server.
  * @constructor
- * @param {sjcl.bitArray} secretKey - The key used for encryption and decryption.
+ * @param {sjcl.bitArray|Crypto} secretKey - The key used for encryption and decryption or a Crypto instance.
+ *
  * @example
  * var messager = new Messager('mysecret');
  * var plainObj = {text: "Hello, World!", from: "meee", signature: "~kekeke"}
@@ -18,7 +19,7 @@ define(["underscore", "chat/crypto"], function (_, Crypto) {
  */
 function Messager(secretKey) {
 	/** @private */
-	this._crypto = new Crypto(secretKey);
+	this._crypto = secretKey instanceof Crypto ? secretKey : new Crypto(secretKey);
 }
 
 /**

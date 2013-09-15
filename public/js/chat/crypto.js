@@ -8,11 +8,14 @@ define(['sjcl', 'chat/cryptoParams'], function (sjcl, cryptoParams) {
 /**
  * Offers methods to encrypt and decrypt using the configured standard parameters.
  * @constructor
- * @param {sjcl.bitArray} secretKey - The key used for encryption and decryption.
+ * @param {Object} params
+ * @param {sjcl.bitArray} params.secretKey - The key used for encryption and decryption.
+ * @param {Object} [params.options] - Parameters to overwrite the global crypto parameters.
  */
-function Crypto(secretKey) {
+function Crypto(params) {
 	// private:
-	this._prp = new sjcl.cipher[cryptoParams.cipher](secretKey);
+	this._options = _.extend(_.clone(cryptoParams), params.options);
+	this._prp = new sjcl.cipher[this._options.cipher](params.secretKey);
 }
 
 /**
@@ -25,7 +28,7 @@ Crypto.prototype.encryptedObjFromString = function (plaintext, options) {
 	if (typeof plaintext !== 'string') {
 		throw TypeError('plaintext must be a string.');
 	}
-	options = _.extend(_.clone(cryptoParams), options);
+	options = _.extend(_.clone(this._options), options);
 	plaintext = sjcl.codec.utf8String.toBits(plaintext);
 	var iv = sjcl.random.randomWords(4, 0);
 	var ct = sjcl.mode[options.mode].encrypt(this._prp, plaintext, iv, options.adata, options.tagSize);
@@ -42,7 +45,7 @@ Crypto.prototype.encryptedObjFromString = function (plaintext, options) {
  * @returns {String} plaintext
  */
 Crypto.prototype.decryptedStringFromObj = function (cipherObj, options) {
-	options = _.extend(_.clone(cryptoParams), options);
+	options = _.extend(_.clone(this._options), options);
 	var iv = sjcl.codec.base64.toBits(cipherObj.iv);
 	var ct = sjcl.codec.base64.toBits(cipherObj.ct);
 	var plaintext = sjcl.mode[options.mode].decrypt(this._prp, ct, iv, options.adata, options.tagSize);

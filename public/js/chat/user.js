@@ -61,7 +61,7 @@ function _setColor(newColor) {
  * Automatically calculates the other when setting either nick or nickCipher.
  * @constructor
  * @param {Object|User} [params] - User or User-like Object for configuration.
- * @param {sjcl.bitArray} params.secretKey
+ * @param {sjcl.bitArray|Crypto} [params.secretKey] - The key used for ciphering or a Crypto instance.
  * @param {String} [params.nick]
  * @param {String} [params.nickCipher]
  * @param {String} [params.signature]
@@ -72,7 +72,10 @@ function _setColor(newColor) {
 function User(params) {
 	params = params || {};
 	/** @private */
-	this._crypto = (params.secretKey ? new Crypto(params.secretKey) : params._crypto) || null;
+	// If secretKey is supplied, use it, otherwise try to copy _crypto from params.
+	this._crypto = params.secretKey
+		? (params.secretKey instanceof Crypto ? params.secretKey : new Crypto(secretKey))
+		: (params._crypto || null);
 	this._nick = params._nick || null; // managed as property
 	this._nickCipher = params._nickCipher || null; // managed as property
 	this._signature = params._signature || null; // managed as property

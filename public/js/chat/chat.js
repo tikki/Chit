@@ -1,6 +1,6 @@
 define(
-	['jquery', 'underscore', 'sjcl', 'chat/messager', 'chat/cryptoParams', 'chat/user', 'chat/rest-client', 'chat/socket-client'],
-	function ($, _,           sjcl,   Messager,        cryptoParams,        User,        restapi,            socketapi) {
+	['jquery', 'underscore', 'sjcl', 'chat/messager', 'chat/cryptoParams', 'chat/user', 'chat/rest-client', 'chat/socket-client', 'chat/crypto'],
+	function ($, _,           sjcl,   Messager,        cryptoParams,        User,        restapi,            socketapi,            Crypto) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
@@ -52,11 +52,16 @@ function _setChatKey(chatKey) {
 	}
 	// update messager & user
 	if (_.isNull(this._chatKey)) {
+		this._crypto = null;
 		this.messager = null;
 		this.user = null;
 	} else {
-		this.messager = new Messager(this._chatKey);
-		this.user = new User(_.extend(this.user || {}, {secretKey: this._chatKey, chatId: this._id}));
+		this._crypto = new Crypto({
+			secretKey: this._chatKey,
+			options: {adata: this._id}
+		});
+		this.messager = new Messager(this._crypto);
+		this.user = new User(_.extend(this.user || {}, {secretKey: this._crypto, chatId: this._id}));
 	}
 }
 function _getServerKey() {
@@ -81,6 +86,7 @@ function _setServerKey() {
 function Chat(params) {
 	params = params || {};
 	/** @private */
+	this._crypto = params._crypto || null;
 	this._id = params._id || null; // managed as property
 	this._chatKey = params._chatKey || null; // managed as property
 	this._serverKey = params._serverKey || null; // managed as property
@@ -114,6 +120,14 @@ function Chat(params) {
  */
 Chat.newChatKey = function () {
 	return sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
+}
+
+/**
+ * @param [params] - As defined by User's constructor.
+ * @returns {User} a new User with the Chat's id and cipher set.
+ */
+Chat.prototype.newUser = function (params) {
+	return new User(_.defaults({secretKey: this._crypto, chatId: this.id}, params));
 }
 
 // CRUD

@@ -119,8 +119,6 @@ $(function () {
 	// wire up socket-api
 	socketapi.events.connect = function (data) {
 		logger.info('Connected.');
-		// set adata
-		cryptoParams.adata = chat.id; // Globally changing the used/expected adata. /** @todo somehow make this local for Chat so we can have multiple instances running without conflict. */
 		// set highlight regex
 		_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
 		logger.info('Joining chat…');
@@ -135,13 +133,13 @@ $(function () {
 		logger.info('Disconnected.');
 	}
 	socketapi.events.join = function (data) {
-		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
+		var user = chat.newUser({nickCipher: data.nick, signature: data.sig});
 		userlist.add(user);
 		completor.add(user.nick);
 		logger.log({from: user, text: 'joined.', tags: 'info'});
 	};
 	socketapi.events.part = function (data) {
-		var user = new User({secretKey: chat.chatKey, nickCipher: data.nick, signature: data.sig});
+		var user = chat.newUser({nickCipher: data.nick, signature: data.sig});
 		userlist.remove(user);
 		logger.log({from: user, text: 'quit.', tags: 'info'});
 	};
@@ -190,13 +188,13 @@ $(function () {
 			logger.error('Could not get names: ' + data.error);
 		} else {
 			logger.info('Got the list of connected names.');
-			var user = new User({secretKey: chat.chatKey});
 			userlist.removeAll();
 			_.each(data.infos, function (info) {
-				user.signature = info.sig;
-				user.nickCipher = info.nick;
-				user.color = null; // reset color
-				var li = userlist.add(new User(user));
+				var user = chat.newUser({
+					signature: info.sig,
+					nickCipher: info.nick
+				});
+				var li = userlist.add(user);
 				if (user.nick === chat.user.nick) {
 					li.addClass('highlight');
 				} else { // we don't want to add outselves to the autocomplete
