@@ -30,23 +30,18 @@ function _getChatKey() {
 }
 /**
  * Updates chatKey, serverKey, messager, and user.
- * @param {sjcl.bitArray|String|null} chatKey - A bitArray or BASE64 encoded String, or `null` to generate a new random key.
+ * @param {sjcl.bitArray|String} chatKey - A bitArray or BASE64 encoded String.
  */
 function _setChatKey(chatKey) {
 	this._chatKey = null; // reset chatKey
 	this._serverKey = null; // reset serverKey
 	// handle new chatKey
-	if (_.isNull(chatKey)) {
-		// generate a new chat key
-		if (sjcl.random.isReady()) {
-			this._chatKey = sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
-		}
-	} else if (_.isArray(chatKey)) {
+	if (_.isArray(chatKey)) {
 		if (cryptoParams.keySize !== sjcl.bitArray.bitLength(chatKey)) {
 			throw Error('Wrong chat key size.');
 		}
 		this._chatKey = chatKey;
-	} else {
+	} else if (_.isString(chatKey)) {
 		// try standard base64 encoding
 		try {
 			this._chatKey = fromBase64(chatKey, 0);
@@ -56,8 +51,13 @@ function _setChatKey(chatKey) {
 		}
 	}
 	// update messager & user
-	this.messager = new Messager(this._chatKey);
-	this.user = new User(_.extend(this.user || {}, {secretKey: this._chatKey}));
+	if (_.isNull(this._chatKey)) {
+		this.messager = null;
+		this.user = null;
+	} else {
+		this.messager = new Messager(this._chatKey);
+		this.user = new User(_.extend(this.user || {}, {secretKey: this._chatKey, chatId: this._id}));
+	}
 }
 function _getServerKey() {
 	if (_.isNull(this._serverKey)) {
@@ -70,19 +70,20 @@ function _setServerKey() {
 }
 
 /**
- * id
- * secret
- * messager
- * user
- * chatKey
- * serverKey
+ * @constructor
+ * @param {Chat|Object} [params]
+ * @param {String} [params.id]
+ * @param {String} [params.secret]
+ * @param {Messager} [params.messager]
+ * @param {User} [params.user]
+ * @param {sjcl.bitArray|String} [params.chatKey]
  */
-function Chat(config) {
-	config = config || {};
+function Chat(params) {
+	params = params || {};
 	/** @private */
-	this._id = null; // managed as property
-	this._chatKey = null; // managed as property
-	this._serverKey = null; // managed as property
+	this._id = params._id || null; // managed as property
+	this._chatKey = params._chatKey || null; // managed as property
+	this._serverKey = params._serverKey || null; // managed as property
 	/** @public properties */
 	Object.defineProperty(this, 'id', {
 		get: _getId,
@@ -96,13 +97,23 @@ function Chat(config) {
 		get: _getServerKey,
 		set: _setServerKey
 	});
-	this.secret = config.secret || null; // secret used to administer the chat (delete, change options, ...)
-	this.messager = config.messager || null;
-	this.user = config.user || null;
-	/** we're setting `id` *after* `user`, because id updates user */
-	this.id = config.id || null; // unique id
-	/** we're setting `chatKey` after `user` and `messager` because both are updated */
-	this.chatKey = config.chatKey || null; // secret key used for encryption & derivation (MUST NOT be transmitted)
+	/** @public */
+	this.secret = params.secret || null; // secret used to administer the chat (delete, change options, ...)
+	this.messager = params.messager || null;
+	this.user = params.user || null;
+	if (!(params instanceof Chat)) {
+		/** we're setting `id` *after* `user`, because id updates user */
+		this.id = params.id || null; // unique id
+		/** we're setting `chatKey` after `user` and `messager` because both are updated */
+		this.chatKey = params.chatKey || null; // secret key used for encryption & derivation (MUST NOT be transmitted)
+	}
+}
+
+/**
+ * @returns {sjcl.bitArray} a new randomly generated chat key.
+ */
+Chat.newChatKey = function () {
+	return sjcl.random.randomWords(cryptoParams.keySize / 32); // word = 32 bit
 }
 
 // CRUD

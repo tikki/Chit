@@ -56,7 +56,7 @@ function prepareLogMessage(message, notifyOnHighlight) {
 	}
 	// If we want to alter the name we need to calculate the message color beforehand.
 	if (_.isString(message.from)) {
-		message.color = new User({nick: message.from, signature: message.signature}).color;
+		message.color = User.calculateColor(message.from, message.signature);
 		message.from = '<' + message.from + '>';
 	}
 	return message;

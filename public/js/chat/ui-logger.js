@@ -191,9 +191,11 @@ Logger.prototype.log = function (message, dontScroll) {
 		lineParts.text.html(url.replaceUrlsWithHtmlLinks(lineParts.text.html()));
 	}
 	// add nick color
-	message.color = message.color || User.calculateColor(message.from, message.signature);
-	if (message.color && lineParts.from) {
-		lineParts.from.css('color', message.color);
+	if (lineParts.from) {
+		message.color = message.color || User.calculateColor(message.from, message.signature);
+		if (message.color) {
+			lineParts.from.css('color', message.color);
+		}
 	}
 	// add tags
 	this.addTags(msgId, message.tags);

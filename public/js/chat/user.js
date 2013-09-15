@@ -8,11 +8,14 @@ define(['sjcl', 'chat/crypto'], function (sjcl, Crypto) {
  * getters and setters used to manage User properties
  */
 function _getNick() {
-	if (_.isNull(this._nick) && !_.isNull(this._nickCipher)) {
+	if (_.isNull(this._nick) && !_.isNull(this._nickCipher) && !_.isNull(this._crypto)) {
 		this._nick = this._crypto.decryptedStringFromObj(JSON.parse(this._nickCipher));
 	}
 	return this._nick;
 }
+/**
+ * Sets nick and resets nickCipher.
+ */
 function _setNick(newNick) {
 	if (_.isString(newNick)) {
 		this._nick = newNick;
@@ -20,11 +23,14 @@ function _setNick(newNick) {
 	}
 }
 function _getNickCipher() {
-	if (_.isNull(this._nickCipher) && !_.isNull(this._nick)) {
+	if (_.isNull(this._nickCipher) && !_.isNull(this._nick) && !_.isNull(this._crypto)) {
 		this._nickCipher = JSON.stringify(this._crypto.encryptedObjFromString(this._nick));
 	}
 	return this._nickCipher;
 }
+/**
+ * Sets nickCipher and resets nick.
+ */
 function _setNickCipher(newNickCipher) {
 	if (_.isString(newNickCipher)) {
 		this._nickCipher = newNickCipher;
@@ -66,11 +72,11 @@ function _setColor(newColor) {
 function User(params) {
 	params = params || {};
 	/** @private */
-	this._crypto = (params.secretKey ? new Crypto(params.secretKey) : params._crypto || null);
-	this._nick = null; // managed as property
-	this._nickCipher = null; // managed as property
-	this._signature = null; // managed as property
-	this._color = null; // managed as property
+	this._crypto = (params.secretKey ? new Crypto(params.secretKey) : params._crypto) || null;
+	this._nick = params._nick || null; // managed as property
+	this._nickCipher = params._nickCipher || null; // managed as property
+	this._signature = params._signature || null; // managed as property
+	this._color = params._color || null; // managed as property
 	/** @public properties */
 	Object.defineProperty(this, 'nick', {
 		get: _getNick,
@@ -89,12 +95,14 @@ function User(params) {
 		set: _setColor
 	});
 	/** @public */
-	this.nick = params.nick || null;
-	this.nickCipher = params.nickCipher || null;
-	this.signature = params.signature || null;
 	this.uid = params.uid || null; // unique (signature) id
 	this.chatId = params.chatId || null;
-	this.color = params.color || null;
+	if (!(params instanceof User)) {
+		this.nick = params.nick || null;
+		if (!params.nick) this.nickCipher = params.nickCipher || null; // if both nick & nickCipher is supplied, nick wins.
+		this.signature = params.signature || null;
+		this.color = params.color || null;
+	}
 }
 
 /**

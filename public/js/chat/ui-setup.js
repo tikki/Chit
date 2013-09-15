@@ -113,7 +113,7 @@ $(function () {
 		if (active === 'new-chat') {
 			var password = passwordInput.val().trim();
 			if (!password.length) {
-				chat.chatKey = null; // force generation of a new key
+				chat.chatKey = Chat.newChatKey();
 			} else {
 				chat.chatKey = chatKeyFromPassword(password);
 			}
