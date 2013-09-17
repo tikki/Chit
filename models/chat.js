@@ -92,6 +92,46 @@ Chat.prototype.checkKey = function (callback) {
 };
 
 /**
+ * Updates the timestamps of database entries for the passed keys.
+ * Also updates the TTL of all the Chat's db entries.
+ * @param {...String} key - One or more of 'created', 'modified', and 'touched'.
+ */
+Chat.prototype._updateTimestamps = function () {
+	var self = this;
+	// turn [arg1, arg2, …] into {arg1: 1, arg2: 1, …}
+	var args = _.chain(arguments)
+		.map(function (e) { return [e, 1]; }).object()
+		.pick('created', 'modified', 'touched').value();
+	// ttl order: created > modified > touched
+	var ttl = args.created ? config.ttl.created
+		: (args.modified ? config.ttl.modified
+		: (args.touched ? config.ttl.touched
+		: null));
+	if (ttl) {
+		var multi = db.multi();
+		var dbKey = util.format('chat:%s:', self.id);
+		// update timestamp values
+		var ima = now();
+		_.each(args, function (value, key) {
+			self[key] = ima;
+			multi.set(dbKey + key, ima);
+		});
+		// update ttl
+		multi.ttl(dbKey + 'secret', function (err, value) { // we're checking secret here because that's the one key that *always* exists
+			// we need to re-set ttl for the updated timestamps
+			var keys = value < ttl ? ['secret', 'messages', 'key', 'created', 'modified', 'touched'] : _.keys(args);
+			ttl = Math.max(value, ttl);
+			var multi = db.multi();
+			_.each(keys, function (key) {
+				multi.expire(dbKey + key, ttl);
+			});
+			multi.exec();
+		});
+		multi.exec();
+	}
+};
+
+/**
  * A dummy function used when no callback is supplied.
  * Keeps us from having to check every time wether callback is a function.
  */
@@ -115,9 +155,7 @@ Chat.prototype.new = function (callback) {
 				db.set(dbKey + 'key', self.key);
 			}
 			db.set(dbKey + 'secret', self.secret);
-			db.set(dbKey + 'created', self.created);
-			db.set(dbKey + 'modified', self.modified);
-			db.set(dbKey + 'touched', self.touched);
+			self._updateTimestamps('touched', 'modified', 'created');
 			// call back
 			callback(self);
 		});
@@ -135,9 +173,7 @@ Chat.prototype.loadMessages = function (callback) {
 		db.lrange(dbKey + 'messages', -config.message.count, -1, function (err, messages) {
 			if (err) return callback(err);
 			self.messages = messages;
-			// update timestamps
-			self.touched = now();
-			db.set(dbKey + 'touched', self.touched);
+			self._updateTimestamps('touched');
 			// call back
 			callback(self);
 		});
@@ -163,10 +199,7 @@ Chat.prototype.addMessage = function (msg, callback) {
 			self.messages = self.messages.slice(-config.message.count + 1); // slice is [start, end); we want to slice away one more than allowed so we have space to push the new message
 			// add message to local buffer
 			self.messages.push(msg);
-			// update timestamps
-			self.modified = self.touched = now();
-			db.set(dbKey + 'modified', self.modified);
-			db.set(dbKey + 'touched', self.touched);
+			self._updateTimestamps('touched', 'modified');
 			// call back
 			callback(self);
 		});
@@ -185,12 +218,14 @@ Chat.prototype.delete = function (callback) {
 		if (self.secret !== secret) {
 			return callback('secret does not match.');
 		}
-		db.del(dbKey + 'secret');
-		db.del(dbKey + 'messages');
-		db.del(dbKey + 'key');
-		db.del(dbKey + 'created');
-		db.del(dbKey + 'modified');
-		db.del(dbKey + 'touched');
+		db.multi()
+			.del(dbKey + 'secret')
+			.del(dbKey + 'messages')
+			.del(dbKey + 'key')
+			.del(dbKey + 'created')
+			.del(dbKey + 'modified')
+			.del(dbKey + 'touched')
+			.exec();
 		// call back
 		callback(self);
 	});

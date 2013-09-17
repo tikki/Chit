@@ -1,9 +1,13 @@
 {
 	"port": 6699,
-	"cookiesecret": PUT_A_LONG_UNIQUE_RANDOM_STRING_HERE,
 	"secretLength": 36,
 	"minKeyLength": 32,
 	"maxKeyLength": 64,
+	"ttl": {
+		"created": 2592000,
+		"modified": 1209600,
+		"touched": 604800
+	},
 	"message": {
 		"length": 256,
 		"count": 100
