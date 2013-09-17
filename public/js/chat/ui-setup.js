@@ -1,7 +1,7 @@
 "use strict";
 define(
-	['underscore', 'jquery', 'sjcl', 'chat/password', 'chat/cryptoParams', 'chat/singletons'],
-	function (_,    $,        sjcl,   password,        cryptoParams,        singletons) {
+	['underscore', 'jquery', 'sjcl', 'chat/password', 'chat/chat', 'chat/cryptoParams', 'chat/singletons'],
+	function (_,    $,        sjcl,   password,        Chat,        cryptoParams,        singletons) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
