@@ -1,3 +1,6 @@
 [submodule "public/js/lib/sjcl"]
 	path = public/js/lib/sjcl
 	url = https://github.com/bitwiseshiftleft/sjcl.git
+[submodule "public/js/lib/EventEmitter"]
+	path = public/js/lib/EventEmitter
+	url = https://github.com/Wolfy87/EventEmitter.git
