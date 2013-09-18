@@ -100,6 +100,7 @@ function User(params) {
 	/** @public */
 	this.uid = params.uid || null; // unique (signature) id
 	this.chatId = params.chatId || null;
+	this.serverSignature = params.serverSignature || null;
 	if (!(params instanceof User)) {
 		this.nick = params.nick || null;
 		if (!params.nick) this.nickCipher = params.nickCipher || null; // if both nick & nickCipher is supplied, nick wins.
@@ -124,7 +125,14 @@ User.prototype.calculatedSignature = function () {
 
 User.prototype.equalTo = function(other) {
 	// ducktyping ftw
-	return this.nick === other.nick && this.signature === other.signature;
+	var tx = this.signature;
+	var ty = this.serverSignature;
+	var ox = other.signature;
+	var oy = other.serverSignature;
+	return this.nick === other.nick
+		&& (_.isNull(tx) && _.isNull(ox) && _.isNull(ty) && _.isNull(oy) // all is null
+			|| (tx && tx === ox) // or there's a signature and it matches
+			|| (ty && ty === oy)); // or there's a server signature and it matches
 }
 
 /**
@@ -157,7 +165,7 @@ User.calculateColor = function(nick, signature) {
 	return '#' + c.toString(16);
 }
 User.prototype.calculatedColor = function() {
-	return User.calculateColor(this.nick, this.signature);
+	return User.calculateColor(this.nick, this.serverSignature);
 }
 
 return User;

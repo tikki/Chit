@@ -6,6 +6,7 @@ require.config({
 		jquery: 'jquery-2.0.3.min',
 		sjcl: 'sjcl/sjcl',
 		underscore: 'underscore-min',
+		eventemitter: 'EventEmitter/EventEmitter.min',
 		chat: '../chat',
 		socketio: '/socket.io/socket.io'
 	},
@@ -23,12 +24,8 @@ require.config({
 });
 
 require(
-	['underscore', 'jquery', 'sjcl', 'chat/user', 'chat/socket-client', 'chat/singletons', 'chat/notifications', 'chat/cryptoParams', 'chat/ui', 'chat/ui-setup'],
-	function (_,    $,        sjcl,   User,        socketapi,            singletons,        notifications,        cryptoParams) {
-
-function asBase64(bitarray, forUrl) {
-	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
-}
+	['underscore', 'jquery', 'sjcl', 'chat/user', 'chat/singletons', 'chat/notifications', 'chat/cryptoParams', 'chat/ui', 'chat/ui-setup'],
+	function (_,    $,        sjcl,   User,        singletons,        notifications,        cryptoParams) {
 
 // website interaction
 $(document).on('click', 'a.auto-link', function (event) {
@@ -116,95 +113,83 @@ $(function () {
 		}
 	});
 
-	// wire up socket-api
-	socketapi.events.connect = function (data) {
+	// Define some chat event callbacks.
+	function handleJoinReply(error) {
+		if (error) {
+			// chat.disconnect();
+			return logger.error('Error joining: ' + error);
+		}
+		logger.info('Joined chat#' + chat.id + '.');
+		// load history
+		logger.info('Loading chat history…');
+		chat.loadHistory(function (plainObjs, error) {
+			if (error) {
+				logger.error('Could not load chat history. (' + error + ')');
+			} else {
+				logger.info('--- History start ---');
+				_.each(plainObjs, function (message) {
+					// Add the names of all former users to the completor.
+					if (message.from !== chat.user.nick) {
+						completor.add(message.from);
+					}
+					logger.log(prepareLogMessage(message), true);
+				});
+				logger.info('--- History end ---');
+			}
+		});
+		// load list of other connected users
+		logger.info('Requesting names…');
+		chat.names(handleNamesReply);
+	}
+	function handleNamesReply(error, data) {
+		if (error) {
+			return logger.error('Could not get names: ' + error);
+		}
+		logger.info('Got a list of connected users.');
+		userlist.removeAll();
+		_.each(data, function (info) {
+			var user = chat.newUser({
+				serverSignature: info.sig || null,
+				nickCipher: info.nick || null
+			});
+			var li = userlist.add(user);
+			if (user.equalTo(chat.user)) {
+				li.addClass('highlight');
+			} else { // we don't want to add outselves to the autocomplete
+				completor.add(user.nick);
+			}
+		});
+	}
+	// Listen for chat events.
+	chat.on('connected', function (data) {
 		logger.info('Connected.');
 		// set highlight regex
 		_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
 		logger.info('Joining chat…');
-		socketapi.join(
-			chat.id,
-			asBase64(chat.serverKey),
-			chat.user.nickCipher,
-			chat.user.signature
-		);
-	};
-	socketapi.events.disconnect = function (data) {
+		chat.join(handleJoinReply);
+	});
+	chat.on('disconnected', function (data) {
 		logger.info('Disconnected.');
-	}
-	socketapi.events.join = function (data) {
-		var user = chat.newUser({nickCipher: data.nick, signature: data.sig});
+	});
+	chat.on('joined', function (data) {
+		var user = chat.newUser({nickCipher: data.nick, serverSignature: data.sig});
 		userlist.add(user);
 		completor.add(user.nick);
 		logger.log({from: user, text: 'joined.', tags: 'info'});
-	};
-	socketapi.events.part = function (data) {
-		var user = chat.newUser({nickCipher: data.nick, signature: data.sig});
+	});
+	chat.on('parted', function (data) {
+		var user = chat.newUser({nickCipher: data.nick, serverSignature: data.sig});
 		userlist.remove(user);
 		logger.log({from: user, text: 'quit.', tags: 'info'});
-	};
-	socketapi.events.message = function (data) {
+	});
+	chat.on('messaged', function (data) {
 		var message = chat.messager.plainObjFromCipherMessage(data.msg);
 		logger.log(prepareLogMessage(message, true));
-	};
-	socketapi.events.message_reply = function (data) {
-		if (data.error) {
-			// var msgId = …;
-			// logger.addTags(msgId, 'error');
-			logger.error(data.error);
-			// data.time
+	});
+	chat.on('userChange', function (data) {
+		if (!data.error) {
+			_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
 		}
-	};
-	socketapi.events.join_reply = function (data) {
-		if (_.has(data, 'error')) {
-			logger.error('Error joining: ' + data.error);
-			// socketapi.disconnect();
-		} else {
-			logger.info('Joined chat#' + chat.id + '.');
-			// load history
-			logger.info('Loading chat history…');
-			chat.loadHistory(function (plainObjs, error) {
-				if (error) {
-					logger.error('Could not load chat history. (' + error + ')');
-				} else {
-					logger.info('--- History start ---');
-					_.each(plainObjs, function (message) {
-						// Add the names of all former users to the completor.
-						if (message.from !== chat.user.nick) {
-							completor.add(message.from);
-						}
-						logger.log(prepareLogMessage(message), true);
-					});
-					logger.info('--- History end ---');
-				}
-			});
-			// load list of other connected users
-			logger.info('Requesting names…');
-			socketapi.names(chat.id);
-		}
-	};
-	socketapi.events.names_reply = function (data) {
-		if (data.error) {
-			logger.error('Could not get names: ' + data.error);
-		} else {
-			logger.info('Got the list of connected names.');
-			userlist.removeAll();
-			_.each(data.infos, function (info) {
-				var user = chat.newUser({
-					signature: info.sig,
-					nickCipher: info.nick
-				});
-				var li = userlist.add(user);
-				if (user.nick === chat.user.nick) {
-					li.addClass('highlight');
-				} else { // we don't want to add outselves to the autocomplete
-					completor.add(user.nick);
-				}
-			});
-		}
-	};
-
-});
-
-		
-});
+	});
+}); // $()
+}); // require()

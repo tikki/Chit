@@ -131,13 +131,13 @@ function joinChat(sockets, data) {
 		var chatId = data.id;
 		var userId = socket.id;
 		// transform signature
-		var sig = transformSignature(cleanString(data.sg) || undefined);
+		var sig = transformSignature(cleanString(data.sg) || null) || undefined; // using undefined, we can skip sending the null signature; every byte counts!
 		// join room & tell everybody
 		var roomName = __chat_prefix + chatId;
 		var userdata = {nick: nick, sig: sig};
 		socket.join(roomName);
 		socket.broadcast.to(roomName).emit('chat/join', userdata);
-		socket.emit('chat/join:reply', {success: true});
+		socket.emit('chat/join:reply', {success: true, sig: sig});
 		// add update hook
 		/** @todo: this seems like a bad way to do it, creating a callback for each and every chat per joined user */
 		userdata.updateCallback = function (data) {

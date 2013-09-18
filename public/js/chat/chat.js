@@ -1,6 +1,6 @@
 define(
-	['jquery', 'underscore', 'sjcl', 'chat/messager', 'chat/cryptoParams', 'chat/user', 'chat/rest-client', 'chat/socket-client', 'chat/crypto'],
-	function ($, _,           sjcl,   Messager,        cryptoParams,        User,        restapi,            socketapi,            Crypto) {
+	['jquery', 'underscore', 'sjcl', 'chat/messager', 'chat/cryptoParams', 'chat/user', 'chat/rest-client', 'chat/socket-client', 'chat/crypto', 'eventemitter'],
+	function ($, _,           sjcl,   Messager,        cryptoParams,        User,        restapi,            socketapi,            Crypto,        EventEmitter) {
 
 function asBase64(bitarray, forUrl) {
 	return sjcl.codec.base64.fromBits(bitarray, 1, forUrl);
@@ -87,6 +87,7 @@ function Chat(params) {
 	params = params || {};
 	/** @private */
 	this._crypto = params._crypto || null;
+	this._joined = params._joined || false;
 	this._id = params._id || null; // managed as property
 	this._chatKey = params._chatKey || null; // managed as property
 	this._serverKey = params._serverKey || null; // managed as property
@@ -113,7 +114,24 @@ function Chat(params) {
 		/** we're setting `chatKey` after `user` and `messager` because both are updated */
 		this.chatKey = params.chatKey || null; // secret key used for encryption & derivation (MUST NOT be transmitted)
 	}
+	// Map selected socket-api events to chat events.
+	// All event names are verbs:
+	// - If a verb is active, the event was triggered by calling a function on Chat.
+	// - If a verb is passive (ends on 'ed'), the event was triggered because a remote action took place.
+	var events = {
+		// chatEvent: socketEvent
+		connected: 'connect',
+		disconnected: 'disconnect',
+		messaged: 'chat/msg',
+		joined: 'chat/join',
+		parted: 'chat/part'
+	};
+	var self = this;
+	_.each(events, function (socketEventName, chatEventName) {
+		socketapi.on(socketEventName, function (data) { self.emitEvent(chatEventName, [data]); });
+	})
 }
+Chat.prototype = Object.create(EventEmitter.prototype);
 
 /**
  * @returns {sjcl.bitArray} a new randomly generated chat key.
@@ -127,7 +145,12 @@ Chat.newChatKey = function () {
  * @returns {User} a new User with the Chat's id and cipher set.
  */
 Chat.prototype.newUser = function (params) {
-	return new User(_.defaults({secretKey: this._crypto, chatId: this.id}, params));
+	// We can't use _.defaults({secretKey: …}, params) because that wouldn't return a User instance if params is of type User.
+	var user = new User(params);
+	// We're directly modifying a User's private ivar here, because otherwide we'd have to create a clone of params first, then extend that with secretKey and then create a new User from that…
+	user._crypto = this._crypto; /** @todo find a way to do this without setting a private ivar */
+	user.chatId = this.id;
+	return user;
 }
 
 // CRUD
@@ -172,8 +195,13 @@ Chat.prototype.post = function (message, callback) {
 	var self = this;
 	var cipherMessage = self.messager.cipherMessageFromPlainObj(message);
 	if (socketapi.isConnected()) {
+		if (_.isFunction(callback)) {
+			/** @todo this will break when, e.g. we send 2 messages 'at once' & the first one fails => both eventhandlers will be triggered by the first fail, even if the second succeeds; we need to be able do itendify messages */
+			socketapi.once('chat/msg:reply', function (reply) {
+				callback.call(self, reply.error || false);
+			});
+		}
 		socketapi.msg(self.id, cipherMessage);
-		callback.call(self, 'HACK--sent-via-socket'); // let's inform the caller that it was sent via socket; it's the best we can do. :|
 	} else {
 		restapi.update(self.id, asBase64(self.serverKey), cipherMessage, function (reply) {
 			if (!reply.error) {
@@ -197,6 +225,90 @@ Chat.prototype.delete = function (callback) {
 		}
 	});
 };
+
+// socket only functionality
+/** @todo this *WILL* break at some point with multiple Chat instances, because the replies don't contain any ids */
+
+Chat.prototype.isConnected = function () {
+	return socketapi.isConnected();
+};
+
+Chat.prototype.connect = function () {
+	socketapi.connect(location.origin); /** @todo might be exploited, change to config */
+};
+
+Chat.prototype.isJoined = function () {
+	return this._joined;
+};
+
+Chat.prototype.join = function (callback) {
+	var self = this;
+	if (!socketapi.isConnected() || self._joined) {
+		return;
+	}
+	if (_.isFunction(callback)) {
+		socketapi.once('chat/join:reply', function (reply) {
+			if (!reply.error) {
+				self._joined = true;
+				self.user.serverSignature = reply.sig || null;
+			}
+			callback.call(self, reply.error || false, reply.sig);
+		});
+	}
+	socketapi.join(
+		self.id,
+		asBase64(self.serverKey),
+		self.user.nickCipher,
+		self.user.signature
+	);
+};
+
+Chat.prototype.part = function (callback) {
+	var self = this;
+	if (!socketapi.isConnected() || !self._joined) {
+		return;
+	}
+	if (_.isFunction(callback)) {
+		socketapi.once('chat/part:reply', function (reply) {
+			if (!reply.error) {
+				self._joined = false;
+			}
+			callback.call(self, reply.error || false);
+		});
+	}
+	socketapi.part(self.id);
+};
+
+Chat.prototype.names = function (callback) {
+	var self = this;
+	if (!socketapi.isConnected() || !self._joined) {
+		return;
+	}
+	if (_.isFunction(callback)) {
+		socketapi.once('chat/names:reply', function (reply) {
+			callback.call(self, reply.error || false, reply.infos);
+		});
+		socketapi.names(self.id);
+	}
+};
+
+Chat.prototype.changeUser = function (params, callback) {
+	var self = this;
+	if (self.user && (params.nick || params.signature)) {
+		if (params.nick) self.user.nick = params.nick;
+		if (params.signature) self.user.uid = params.signature;
+		self.user.signature = null; // reset signature
+		if (self._joined) {
+			// cycle (part + join) to update nick & sig
+			self.part(function (partError) {
+				self.join(function (joinError, serverSignature) {
+					self.emitEvent('userChange', [{error: partError || joinError, serverSignature: serverSignature}]);
+					if (_.isFunction(callback)) callback.call(self, partError || joinError, serverSignature);
+				});
+			});
+		}
+	}
+}
 
 return Chat;
 	

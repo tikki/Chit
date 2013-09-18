@@ -1,7 +1,7 @@
 "use strict";
 define(
-	['underscore', 'jquery', 'chat/singletons', 'chat/socket-client', 'chat/ringbuffer'],
-	function (_,    $,        singletons,        socketapi,            RingBuffer) {
+	['underscore', 'jquery', 'chat/singletons', 'chat/ringbuffer'],
+	function (_,    $,        singletons,        RingBuffer) {
 
 var commands = {
 	help: {
@@ -23,15 +23,18 @@ var commands = {
 			if (!newNick) {
 				return commands.help.func('nick');
 			}
-			if (socketapi.isConnected()) {
-				return singletons.logger.error('[known bug] Cannot change nick while connected. (sorry :/)');
-			}
 			newNick = newNick.trim();
-			singletons.chat.user.nick = newNick;
-			singletons.chat.user.signature = null; // reset signature
+			singletons.userlist.remove(singletons.chat.user);
+			singletons.chat.changeUser({nick: newNick}, function (error) {
+				// this will only be executed if we had joined before.
+				// if that's the case, no matter if changing the nick worked or not, we want the user to be added back to the user list.
+				singletons.userlist.add(singletons.chat.newUser(singletons.chat.user)).addClass('highlight');
+			});
 			singletons.logger.info('Set nickname: ' + newNick);
 			// automatically connect
-			commands.connect.func();
+			if (!singletons.chat.isConnected()) {
+				commands.connect.func();
+			}
 		}
 	},
 	sig: {
@@ -41,23 +44,24 @@ var commands = {
 				return commands.help.func('sig');
 			}
 			newSignature = newSignature.trim();
-			singletons.chat.user.uid = newSignature;
-			singletons.chat.user.signature = null; // reset signature
+			singletons.userlist.remove(singletons.chat.user);
+			singletons.chat.changeUser({signature: newSignature}, function (error, serverSignature) {
+				singletons.userlist.add(singletons.chat.newUser(singletons.chat.user)).addClass('highlight');
+			});
 			singletons.logger.info('New signature set.');
 		}
 	},
 	connect: {
 		help: ': Connects to the server.',
 		func: function () {
+			if (singletons.chat.isConnected()) {
+				return singletons.logger.error('Already connected.');
+			}
 			if (!singletons.chat.user.nick) {
 				return singletons.logger.error('Please use /nick to set a nickname first.');
 			}
 			singletons.logger.info('Connecting…');
-			if (socketapi.isConnected()) {
-				socketapi.events.connect();
-			} else {
-				socketapi.connect(location.origin); /** @todo might be exploited, change to config */
-			}
+			singletons.chat.connect();
 		}
 	},
 	// disconnect: {
@@ -124,7 +128,7 @@ $(function () {
 			var parsed = parseInput(text);
 			if (parsed === false) {
 				// enforce socket connection
-				if (!socketapi.isConnected()) {
+				if (!chat.isConnected()) {
 					commands.connect.func();
 					return;
 				}
@@ -139,15 +143,15 @@ $(function () {
 				var msgId = logger.log(message);
 				// send message
 				chat.post(message, function (error) {
-					if (error === 'HACK--sent-via-socket') {
-						// this is a hack. :|
-						// if something was sent via socket, there's no immediate feedback we could wait for.
-						// so we just assume it's okay and we delete the message and hope for the answer to come.
-						logger.removeMessage(msgId);
-					} else if (error) {
+					if (error) {
 						logger.addTags(msgId, 'error');
 					} else {
-						logger.removeTags(msgId, 'unconfirmed');
+						if (chat.isConnected()) {
+							// if the message was sent via socket, the server will send us the message back soon (like any other message).
+							logger.removeMessage(msgId);
+						} else {
+							logger.removeTags(msgId, 'unconfirmed');
+						}
 					}
 				});
 			}
