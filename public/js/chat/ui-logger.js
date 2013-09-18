@@ -38,7 +38,24 @@ function Logger(ul) {
 	this._newMessageId();
 	this._latestTimestamp = 0;
 	this._dateString = '';
+	this._highlight = null;
 }
+
+Logger.prototype.getHighlight = function () {
+	return this._highlight;
+};
+Logger.prototype.setHighlight = function (regex) {
+	this._highlight = regex;
+	// change higlight for logged messages
+	this.ul.find('.message').each(function () {
+		var message = $(this);
+		message.removeClass('highlight');
+		var text = message.find('.text').text();
+		if (regex.test(text)) {
+			message.addClass('highlight');
+		}
+	});
+};
 
 /**
  * @private
@@ -199,6 +216,10 @@ Logger.prototype.log = function (message, dontScroll) {
 	}
 	// add tags
 	this.addTags(msgId, message.tags);
+	// add highlight
+	if (this._highlight && this._highlight.test(lineParts.text)) {
+		newLine.addClass('highlight');
+	}
 	// scroll new line into view
 	if (!dontScroll) {
 		this.scrollToLatest();

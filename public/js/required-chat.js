@@ -37,11 +37,10 @@ $(document).on('click', 'a.auto-link', function (event) {
 	// }
 });
 
-var _logMessageHighlightRegex = null; //new RegExp('\\b' + chat.user.nick + '\\b', 'i');
 function prepareLogMessage(message, notifyOnHighlight) {
 	// check for highlight
 	var text = message.text;
-	if (_logMessageHighlightRegex && _logMessageHighlightRegex.test(text)) {
+	if (singletons.logger.getHighlight() && singletons.logger.getHighlight().test(text)) {
 		message.tags = 'highlight';
 		if (notifyOnHighlight) {
 			// Cut the text for the notification.
@@ -163,8 +162,6 @@ $(function () {
 	// Listen for chat events.
 	chat.on('connected', function (data) {
 		logger.info('Connected.');
-		// set highlight regex
-		_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
 		logger.info('Joining chat…');
 		chat.join(handleJoinReply);
 	});
@@ -185,11 +182,6 @@ $(function () {
 	chat.on('messaged', function (data) {
 		var message = chat.messager.plainObjFromCipherMessage(data.msg);
 		logger.log(prepareLogMessage(message, true));
-	});
-	chat.on('userChange', function (data) {
-		if (!data.error) {
-			_logMessageHighlightRegex = new RegExp('\\b' + chat.user.nick + '\\b', 'i'); /** @todo globally => bad! */
-		}
 	});
 }); // $()
 }); // require()

@@ -24,6 +24,7 @@ var commands = {
 				return commands.help.func('nick');
 			}
 			newNick = newNick.trim();
+			singletons.logger.setHighlight(new RegExp('\\b' + newNick + '\\b', 'i'));
 			singletons.userlist.remove(singletons.chat.user);
 			singletons.chat.changeUser({nick: newNick}, function (error) {
 				// this will only be executed if we had joined before.
