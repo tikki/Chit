@@ -72,11 +72,13 @@ Userlist.prototype.add = function(user) {
 Userlist.prototype.remove = function(user) {
 	var userFilter = _makeUserFilter(user);
 	var dbEntry = _.find(this._db, userFilter);
-	if (dbEntry && --dbEntry.count === 0) {
-		$(dbEntry.li).remove();
-		this._db = _.reject(this._db, userFilter);
-	} else {
-		_updateLiWithEntry(dbEntry);
+	if (dbEntry) {
+		if (--dbEntry.count === 0) {
+			$(dbEntry.li).remove();
+			this._db = _.reject(this._db, userFilter);
+		} else {
+			_updateLiWithEntry(dbEntry);
+		}
 	}
 };
 
